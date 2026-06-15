@@ -175,10 +175,9 @@
       if (sha256(input.value) === PASS_HASH) { succeed(); } else { fail(); }
     }
 
-    // Validation runs ONLY when the Unlock button is clicked.
+    // Validation runs on Unlock button click, or when Enter is pressed.
     unlockBtn.addEventListener('click', validate);
-    // Pressing Enter must not validate or submit the form.
-    form.addEventListener('submit', function (ev) { ev.preventDefault(); });
+    form.addEventListener('submit', function (ev) { ev.preventDefault(); validate(); });
     // clear the error state as soon as the user edits the field again
     input.addEventListener('input', function () {
       if (gate.classList.contains('pf-error')) gate.classList.remove('pf-error');
