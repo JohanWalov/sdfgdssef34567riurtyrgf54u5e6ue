@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Form Builder — drag & drop</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--ink:#202020;--icon:#374151;--muted:#6b7280;--line:#e5e7eb;--field:#c8c8de;
+  --blue:#3e5bfd;--surface:#fefefe;--canvas:#f9faff;--item:#f6f7fe;
+  --e-out:cubic-bezier(.16,1,.3,1);--e-io:cubic-bezier(.76,0,.24,1);--e-spring:cubic-bezier(.34,1.5,.6,1)}
+body{font-family:'Inter',system-ui,sans-serif;background:transparent;
+  -webkit-font-smoothing:antialiased;height:100vh;display:flex;align-items:center;justify-content:center;padding:0}
+.frame{position:relative;width:100%;height:100%;border-radius:0;overflow:hidden;background:var(--canvas)}
+.scaler{position:absolute;top:0;left:0;width:1280px;height:800px;transform-origin:top left}
+.camera{position:absolute;inset:0;transform-origin:0 0;transition:transform .9s var(--e-out)}
+.app{position:relative;width:1280px;height:800px;background:var(--canvas);display:flex;flex-direction:column;color:var(--icon);font-size:14px}
+
+/* header */
+.hdr{height:64px;background:var(--surface);border-bottom:1px solid var(--line);display:flex;align-items:center;
+  justify-content:space-between;padding:8px 20px 8px 8px;flex:none}
+.iconbtn{width:32px;height:32px;border-radius:6px;display:flex;align-items:center;justify-content:center}
+.hleft{display:flex;align-items:center;gap:8px;min-width:0}
+.center-wrap{display:flex;gap:12px;align-items:center;padding:6px 8px}
+.title{font-weight:700;font-size:15px;line-height:20px;color:var(--ink);white-space:nowrap}
+.draftchip{background:var(--line);height:24px;display:flex;align-items:center;padding:0 12px;border-radius:999px;font-size:12px;font-weight:500;line-height:20px;color:var(--ink)}
+.autosave{display:flex;gap:8px;align-items:center;height:32px;padding:8px 4px;border-radius:6px;font-size:12px;font-weight:500;color:var(--ink)}
+.hgroup{display:flex;gap:8px;align-items:center}
+.btn{height:40px;display:flex;align-items:center;justify-content:center;padding:0 16px;border-radius:8px;font-size:14px;font-weight:600;white-space:nowrap}
+.btn.ghost{background:#ebf5fd;color:var(--blue)}
+.btn.primary{background:var(--blue);color:var(--surface)}
+
+/* body (absolute columns so the panel can slide in) */
+.body2{flex:1;position:relative;min-height:0}
+.libside{position:absolute;left:0;top:0;bottom:0;width:300px;background:var(--surface);border-right:1px solid var(--line);
+  display:flex;flex-direction:column;gap:20px;padding:20px;overflow:hidden}
+.lib-sec{display:flex;flex-direction:column;gap:10px}
+.lib-h{font-weight:600;font-size:14px;line-height:20px;color:var(--ink)}
+.lib-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.libcard{background:var(--item);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:4px;align-items:flex-start;
+  transition:background .22s var(--e-out),opacity .25s var(--e-out),transform .26s var(--e-spring),box-shadow .26s var(--e-out)}
+.libcard.hover{background:#eceffe;transform:translateY(-1px) scale(1.025);box-shadow:0 6px 16px rgba(22,32,43,.09)}
+.libcard.lifting{opacity:.45}
+.libcard .ico{width:24px;height:24px}
+.libcard .lbl{font-size:14px;font-weight:500;line-height:20px;color:var(--ink)}
+
+.canvas{position:absolute;left:300px;top:0;bottom:0;right:300px;background:var(--canvas);display:flex;flex-direction:column;
+  align-items:center;padding:32px 24px;overflow:hidden}
+.docwrap{width:100%;max-width:680px;display:flex;flex-direction:column;gap:8px;align-items:center}
+.docframe{background:#fff;border:1px solid var(--line);border-radius:16px;padding:8px 12px;display:flex;align-items:center;width:100%}
+.block{background:var(--surface);border-radius:6px;flex:1;min-width:0;padding:16px;display:flex;flex-direction:column;gap:16px}
+.blockhead{display:flex;gap:8px;align-items:center;padding:0 4px}
+.acc{display:flex;gap:6px;align-items:center}
+.blocktitle{flex:1;height:32px;display:flex;align-items:center;padding:4px 8px;border-radius:6px;font-weight:700;font-size:16px;line-height:24px;color:var(--ink)}
+.morebtn{width:32px;height:32px;border-radius:6px;display:flex;align-items:center;justify-content:center;flex:none;
+  transition:transform .15s var(--e-out),background .15s var(--e-out)}
+.morebtn.press{transform:scale(.86);background:#eef1f6}
+.morebtn.hover{background:#f1f3f7}
+.optrow.addopt{opacity:0;transform:translateY(-8px);max-height:0;overflow:hidden;
+  transition:opacity .35s var(--e-out),transform .42s var(--e-spring),max-height .42s var(--e-out)}
+.optrow.addopt.in{opacity:1;transform:none;max-height:48px}
+.chip-pill.addchip{opacity:0;transform:scale(.75);transform-origin:left center;
+  transition:opacity .3s var(--e-out),transform .42s var(--e-spring)}
+.chip-pill.addchip.in{opacity:1;transform:none}
+.bdivider{background:#eceef0;height:1px;border-radius:999px}
+
+/* drop zone */
+.dropzone{position:relative;border-radius:12px;width:100%;background:transparent;transition:background .3s var(--e-out)}
+.dropzone .dzin{position:relative;display:flex;align-items:center;justify-content:center;padding:26px 40px;min-height:74px}
+.dropzone .dztext{font-size:14px;line-height:20px;color:#6b7280;font-weight:450;white-space:nowrap}
+.dropzone .dzidle,.dropzone .dzdrag{position:absolute;left:0;right:0;display:flex;align-items:center;justify-content:center;
+  gap:5.5px;flex-wrap:wrap;padding:0 40px;transition:opacity .7s var(--e-out),transform .9s var(--e-spring)}
+.dropzone .dzidle{opacity:1;transform:none}
+.dropzone .dzdrag{opacity:0;transform:translateY(12px) scale(.97)}
+.dropzone.dragging .dzidle{opacity:0;transform:translateY(-12px) scale(.97)}
+.dropzone.dragging .dzdrag{opacity:1;transform:none}
+.dropzone .kbd{background:#fff;display:flex;align-items:center;justify-content:center;padding:1.5px 6px;border-radius:3px;position:relative}
+.dropzone .kbd::before{content:"";position:absolute;inset:0;border:1px solid #cfd4db;border-bottom-width:2px;border-radius:3px;pointer-events:none}
+.dropzone .kbd span{font-size:13px;font-weight:500;color:#292c33}
+.dropzone .dzborder{position:absolute;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none}
+.dropzone .dzborder rect{x:1px;y:1px;width:calc(100% - 2px);height:calc(100% - 2px);rx:12px;fill:none;
+  stroke:#c4c9d2;stroke-width:1.6;stroke-dasharray:12 9;transition:stroke .25s var(--e-out),stroke-dasharray .25s var(--e-out)}
+.dropzone.dragging{background:#eaf2fd}
+.dropzone.dragging .dzborder rect{stroke:var(--blue)}
+
+/* question (dropped) */
+.qlist{display:flex;flex-direction:column;gap:12px}
+.droppedQ{opacity:0;transform:translateY(10px) scale(.96);transition:opacity .5s var(--e-out),transform .55s var(--e-spring)}
+.droppedQ.in{opacity:1;transform:none}
+.qdesigner{background:var(--item);border-radius:12px;position:relative;padding:12px 10px 12px 8px;display:flex;gap:8px;align-items:center}
+.qdesigner .focus{position:absolute;inset:0;border-radius:12px;pointer-events:none;opacity:0;transition:opacity .3s var(--e-out)}
+.qdesigner.sel .focus{opacity:1}
+.qdesigner .focus::before{content:"";position:absolute;inset:-4px;border:4px solid var(--blue);border-radius:16px}
+.qdesigner .focus::after{content:"";position:absolute;inset:-2px;border:2px solid var(--surface);border-radius:14px}
+.accbtn{width:30px;display:flex;gap:4px;align-items:center;justify-content:flex-end;padding:4px;flex:none}
+.qcontent{flex:1;min-width:0;display:flex;gap:8px;align-items:center}
+.qtitle{width:170px;flex:none;display:flex;align-items:center;padding:6px 8px;border-radius:6px;font-weight:600;font-size:14px;line-height:20px;color:var(--ink);white-space:nowrap}
+.chipsgrp{display:flex;gap:4px;align-items:center}
+.qdesigner .chipsgrp{margin-left:-18px}
+.chip-pill{background:#e7eaff;height:32px;display:flex;align-items:center;padding:0 16px;border-radius:999px;font-size:14px;font-weight:500;color:var(--ink);white-space:nowrap}
+
+.addq{background:#ebf5fd;height:40px;display:inline-flex;align-items:center;justify-content:center;padding:0 16px;border-radius:8px;color:var(--blue);font-weight:600;font-size:14px;align-self:flex-start}
+.addblock{height:40px;display:flex;align-items:center;justify-content:center;padding:0 16px;color:var(--blue);font-weight:600;font-size:14px}
+
+/* properties panel (always visible; content fades in on selection) */
+.props{position:absolute;right:0;top:0;bottom:0;width:300px;background:var(--surface);border-left:1px solid var(--line);
+  display:flex;flex-direction:column;gap:16px;padding:20px 0;overflow:hidden}
+.props-content{display:flex;flex-direction:column;gap:16px;opacity:0;transform:translateY(8px);
+  transition:opacity .4s var(--e-out),transform .45s var(--e-spring)}
+.props.filled .props-content{opacity:1;transform:none}
+.psec{display:flex;flex-direction:column;gap:16px;padding:0 20px}
+.psec .h{font-weight:700;font-size:14px;line-height:20px;color:var(--ink)}
+.combo{display:flex;flex-direction:column;gap:4px}
+.combo .lbl{font-weight:500;font-size:14px;line-height:20px;color:var(--ink)}
+.field{transition:border-color .2s var(--e-out),box-shadow .2s var(--e-out)}
+.field.focusf{border-color:var(--blue);box-shadow:0 0 0 3px rgba(62,91,253,.16)}
+.field .val.isph{color:var(--muted)}
+.field.typing .val::after{content:"";display:inline-block;width:1.5px;height:15px;background:var(--blue);
+  margin-left:1px;transform:translateY(2px);animation:fblink 1s steps(1) infinite}
+@keyframes fblink{50%{opacity:0}}
+.field{background:var(--surface);height:40px;border:1px solid var(--field);border-radius:10px;display:flex;align-items:center;gap:8px;padding:0 12px}
+.field .val{flex:1;color:var(--icon);font-size:14px;line-height:20px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.field .ph{flex:1;color:var(--muted);font-size:14px;line-height:20px}
+.field .closex{display:flex;align-items:center;justify-content:center}
+.vdiv{width:1px;height:100%;background:var(--field)}
+.optrow{display:flex;gap:8px;align-items:center}
+.optrow .grip{display:flex;align-items:center;justify-content:center;height:32px;padding:8px 2px}
+.optrow .field{flex:1}
+.switch{display:flex;gap:12px;align-items:center}
+.track{width:44px;height:24px;border-radius:999px;background:var(--line);display:flex;align-items:center;padding:2px;justify-content:flex-start}
+.track.on{background:var(--blue);justify-content:flex-end}
+.knob{width:20px;height:20px;border-radius:50%;background:#fff}
+.swlabel{font-size:14px;font-weight:500;color:var(--ink);line-height:20px}
+.pdivider{background:var(--line);height:1px;border-radius:999px}
+
+/* empty state — create your first block */
+.emptyCreate{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;
+  padding-top:64px;transition:opacity .4s var(--e-out),transform .4s var(--e-out)}
+.emptyCreate.out{opacity:0;transform:scale(.985)}
+.ec-illus{margin-bottom:26px}
+.ec-h{font-weight:700;font-size:18px;line-height:24px;color:var(--ink);margin-bottom:8px}
+.ec-sub{display:flex;align-items:center;gap:7px;font-size:14px;line-height:20px;color:var(--muted);margin-bottom:24px}
+.kbd2{background:#fff;display:inline-flex;align-items:center;justify-content:center;min-width:24px;height:24px;padding:0 7px;
+  border-radius:4px;position:relative;font-size:13px;font-weight:500;color:#292c33}
+.kbd2::before{content:"";position:absolute;inset:0;border:1px solid #cfd4db;border-bottom-width:2px;border-radius:4px;pointer-events:none}
+.ec-btn{background:var(--blue);color:var(--surface);height:40px;display:inline-flex;align-items:center;justify-content:center;
+  padding:0 16px;border-radius:8px;font-weight:600;font-size:14px;
+  transition:transform .16s var(--e-out),background .18s var(--e-out),box-shadow .22s var(--e-out)}
+.ec-btn.hover{background:#3550f0}
+.ec-btn.press{transform:scale(.95)}
+.docwrap{width:100%;max-width:680px;display:flex;flex-direction:column;gap:8px;align-items:center;
+  opacity:0;transform:translateY(10px) scale(.99);transition:opacity .42s var(--e-out),transform .5s var(--e-spring)}
+.docwrap.in{opacity:1;transform:none}
+
+/* full-question drag preview (matches "draggable question" design) */
+.dragQ{position:absolute;left:0;top:0;z-index:60;display:flex;gap:8px;align-items:center;
+  background:var(--item);border-radius:12px;padding:12px 10px;pointer-events:none;opacity:0;will-change:transform;
+  box-shadow:0 18px 40px rgba(22,32,43,.22),0 4px 12px rgba(22,32,43,.10);
+  transition:opacity .2s var(--e-out),box-shadow .3s var(--e-out)}
+.dragQ.show{opacity:1}
+.dragQ .qtitle{width:170px;flex:none;font-weight:600;font-size:14px;line-height:20px;color:var(--ink);white-space:nowrap;padding:6px 8px}
+.dragQ .chipsgrp{margin-left:0;display:flex;gap:4px;align-items:center}
+.dragQ .morebtn{margin-left:auto}
+
+/* cursor */
+.cursor{position:absolute;left:0;top:0;z-index:90;pointer-events:none;transition:transform .62s var(--e-io);
+  filter:drop-shadow(0 2px 5px rgba(16,24,40,.25));will-change:transform}
+.cursor .lyr{position:absolute;left:0;top:0}
+.cursor .open,.cursor .grabh{left:-13px;top:-13px}
+.cursor .open,.cursor .grabh{display:none}
+.cursor.grab .arrow{display:none} .cursor.grab .open{display:block}
+.cursor.grabbing .arrow{display:none} .cursor.grabbing .grabh{display:block}
+</style></head>
+<body>
+<div class="frame"><div class="scaler" id="scaler"><div class="camera" id="camera">
+ <div class="app">
+
+  <!-- header -->
+  <div class="hdr">
+    <div class="hleft">
+      <div class="iconbtn"><svg width="18" height="18" viewBox="0 0 12.1667 9.5" fill="none" preserveAspectRatio="xMidYMid meet" style="display:block"><path d="M0.75 4.75H11.4167M0.75 0.75H11.4167M0.75 8.75H11.4167" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" vector-effect="non-scaling-stroke"/></svg></div>
+      <div class="center-wrap">
+        <span class="title">Lung surgery (case history)</span>
+        <span class="draftchip">Draft</span>
+        <span class="autosave"><svg width="16" height="16" viewBox="0 0 15.5 10.4999" fill="none" preserveAspectRatio="xMidYMid meet" style="display:block"><path d="M4.0099 9.74715C2.2095 9.74715 0.75 8.3581 0.75 6.64446C0.75 4.93151 2.2095 3.54246 4.0099 3.54246C4.285 2.32298 5.2657 1.32774 6.5824 0.931165C7.8984 0.535283 9.3516 0.797589 10.3932 1.62327C11.4348 2.44687 11.9066 3.70441 11.6322 4.92389H12.3252C13.6643 4.92389 14.75 6.00357 14.75 7.33656C14.75 8.67024 13.6643 9.74991 12.3245 9.74991H4.0099M5.20455 6.14991L6.47727 7.43563L9.02273 4.8642" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" vector-effect="non-scaling-stroke"/></svg>Changes saved</span>
+      </div>
+    </div>
+    <div class="hgroup">
+      <div class="iconbtn"><svg width="16" height="16" viewBox="0 0 13.5234 14.8333" fill="none" preserveAspectRatio="xMidYMid meet" style="display:block"><path d="M6.90839 0.75H6.61506C6.26143 0.75 5.92229 0.890476 5.67225 1.14052C5.4222 1.39057 5.28172 1.72971 5.28172 2.08333V2.20333C5.28148 2.43715 5.21976 2.66679 5.10275 2.86923C4.98574 3.07166 4.81755 3.23976 4.61506 3.35667L4.32839 3.52333C4.1257 3.64036 3.89577 3.70197 3.66172 3.70197C3.42767 3.70197 3.19775 3.64036 2.99506 3.52333L2.89506 3.47C2.5891 3.29351 2.22561 3.24563 1.88439 3.33687C1.54317 3.42811 1.25209 3.65102 1.07506 3.95667L0.928389 4.21C0.751897 4.51596 0.704018 4.87944 0.795261 5.22067C0.886503 5.56189 1.10941 5.85297 1.41506 6.03L1.51506 6.09667C1.71657 6.21301 1.88413 6.38006 2.00109 6.58122C2.11804 6.78238 2.18032 7.01065 2.18172 7.24333V7.58333C2.18265 7.81828 2.12149 8.0493 2.00442 8.25301C1.88735 8.45671 1.71853 8.62586 1.51506 8.74333L1.41506 8.80333C1.10941 8.98037 0.886503 9.27144 0.795261 9.61267C0.704018 9.95389 0.751897 10.3174 0.928389 10.6233L1.07506 10.8767C1.25209 11.1823 1.54317 11.4052 1.88439 11.4965C2.22561 11.5877 2.5891 11.5398 2.89506 11.3633L2.99506 11.31C3.19775 11.193 3.42767 11.1314 3.66172 11.1314C3.89577 11.1314 4.1257 11.193 4.32839 11.31L4.61506 11.4767C4.81755 11.5936 4.98574 11.7617 5.10275 11.9641C5.21976 12.1665 5.28148 12.3962 5.28172 12.63V12.75C5.28172 13.1036 5.4222 13.4428 5.67225 13.6928C5.92229 13.9429 6.26143 14.0833 6.61506 14.0833H6.90839C7.26201 14.0833 7.60115 13.9429 7.8512 13.6928C8.10125 13.4428 8.24172 13.1036 8.24172 12.75V12.63C8.24196 12.3962 8.30368 12.1665 8.4207 11.9641C8.53771 11.7617 8.7059 11.5936 8.90839 11.4767L9.19506 11.31C9.39775 11.193 9.62767 11.1314 9.86172 11.1314C10.0958 11.1314 10.3257 11.193 10.5284 11.31L10.6284 11.3633C10.9343 11.5398 11.2978 11.5877 11.6391 11.4965C11.9803 11.4052 12.2714 11.1823 12.4484 10.8767L12.5951 10.6167C12.7715 10.3107 12.8194 9.94722 12.7282 9.606C12.6369 9.26478 12.414 8.9737 12.1084 8.79667L12.0084 8.74333C11.8049 8.62586 11.6361 8.45671 11.519 8.25301C11.402 8.0493 11.3408 7.81828 11.3417 7.58333V7.25C11.3408 7.01505 11.402 6.78403 11.519 6.58033C11.6361 6.37662 11.8049 6.20747 12.0084 6.09L12.1084 6.03C12.414 5.85297 12.6369 5.56189 12.7282 5.22067C12.8194 4.87944 12.7715 4.51596 12.5951 4.21L12.4484 3.95667C12.2714 3.65102 11.9803 3.42811 11.6391 3.33687C11.2978 3.24563 10.9343 3.29351 10.6284 3.47L10.5284 3.52333C10.3257 3.64036 10.0958 3.70197 9.86172 3.70197C9.62767 3.70197 9.39775 3.64036 9.19506 3.52333L8.90839 3.35667C8.7059 3.23976 8.53771 3.07166 8.4207 2.86923C8.30368 2.66679 8.24196 2.43715 8.24172 2.20333V2.08333C8.24172 1.72971 8.10125 1.39057 7.8512 1.14052C7.60115 0.890476 7.26201 0.75 6.90839 0.75Z" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" vector-effect="non-scaling-stroke"/><path d="M6.76172 9.41667C7.86629 9.41667 8.76172 8.52124 8.76172 7.41667C8.76172 6.3121 7.86629 5.41667 6.76172 5.41667C5.65715 5.41667 4.76172 6.3121 4.76172 7.41667C4.76172 8.52124 5.65715 9.41667 6.76172 9.41667Z" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" vector-effect="non-scaling-stroke"/></svg></div>
+      <div class="btn ghost">Preview</div>
+      <div class="btn primary">Publish</div>
+    </div>
+  </div>
+
+  <!-- body -->
+  <div class="body2">
+
+    <!-- component library -->
+    <div class="libside">
+      <div class="lib-sec"><div class="lib-h">Components</div><div class="lib-grid"><div class="libcard"><div class="ico"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" preserveAspectRatio="xMidYMid meet" style="display:block"><path d="M1 5.5H19V18.5H1M1 12.5H13.5" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/></svg></div><div class="lbl">Text field</div></div><div class="libcard"><div class="ico"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" preserveAspectRatio="xMidYMid meet" style="display:block"><path d="M15.5 17V7H12M12 17H19M4.5 7C6.433 7 8 8.49238 8 10.3333V13.6667C8 15.5076 6.433 17 4.5 17C2.567 17 1 15.5076 1 13.6667V10.3333C1 8.49238 2.567 7 4.5 7Z" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/></svg></div><div class="lbl">Decimal field</div></div><div class="libcard"><div class="ico"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" preserveAspectRatio="xMidYMid meet" style="display:block"><path d="M2 5.5L3.625 7L6.33333 4.5M2 11.5L3.625 13L6.33333 10.5M2 17.5L3.625 19L6.33333 16.5M10.125 6H19.875M10.125 12H19.875M10.125 18H19.875" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/></svg></div><div class="lbl">Checkbox</div></div><div class="libcard"><div class="ico"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" preserveAspectRatio="xMidYMid meet" style="display:block"><path d="M8.23047 6H17.2305M8.23047 12H17.2305M8.23047 18H17.2305M4.23047 6C4.23047 6.82843 3.5589 7.5 2.73047 7.5C1.90204 7.5 1.23047 6.82843 1.23047 6C1.23047 5.17157 1.90204 4.5 2.73047 4.5C3.5589 4.5 4.23047 5.17157 4.23047 6ZM4.23047 12C4.23047 12.8284 3.5589 13.5 2.73047 13.5C1.90204 13.5 1.23047 12.8284 1.23047 12C1.23047 11.1716 1.90204 10.5 2.73047 10.5C3.5589 10.5 4.23047 11.1716 4.23047 12ZM4.23047 18C4.23047 18.8284 3.5589 19.5 2.73047 19.5C1.90204 19.5 1.23047 18.8284 1.23047 18C1.23047 17.1716 1.90204 16.5 2.73047 16.5C3.5589 16.5 4.23047 17.1716 4.23047 18Z" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/></svg></div><div class="lbl">Radio button</div></div><div class="libcard"><div class="ico"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" preserveAspectRatio="xMidYMid meet" style="display:block"><path d="M5.77732 3.91211V7.14727M13.0679 3.91211V7.14727M1.8457 10.3824H16.9995M3.41835 5.52969H15.4269C16.2954 5.52969 16.9995 6.2539 16.9995 7.14727V18.4703C16.9995 19.3637 16.2954 20.0879 15.4269 20.0879H3.41835C2.5498 20.0879 1.8457 19.3637 1.8457 18.4703V7.14727C1.8457 6.2539 2.5498 5.52969 3.41835 5.52969Z" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/></svg></div><div class="lbl">Date field</div></div><div class="libcard" id="chipCard"><div class="ico"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" preserveAspectRatio="xMidYMid meet" style="display:block"><path d="M7.1543 12H13.1543M5.6543 16.5H14.6543C17.1396 16.5 19.1543 14.4853 19.1543 12C19.1543 9.51472 17.1396 7.5 14.6543 7.5H5.6543C3.16902 7.5 1.1543 9.51472 1.1543 12C1.1543 14.4853 3.16902 16.5 5.6543 16.5Z" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/></svg></div><div class="lbl">Chips</div></div><div class="libcard"><div class="ico"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" preserveAspectRatio="xMidYMid meet" style="display:block"><path d="M1 5.5H19V18.5H1M14 15L12.5667 13.5667M13.3333 11.6667C13.3333 13.1394 12.1394 14.3333 10.6667 14.3333C9.19391 14.3333 8 13.1394 8 11.6667C8 10.1939 9.19391 9 10.6667 9C12.1394 9 13.3333 10.1939 13.3333 11.6667Z" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/></svg></div><div class="lbl">Combobox</div></div><div class="libcard"><div class="ico"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" preserveAspectRatio="xMidYMid meet" style="display:block"><path d="M1 5.5H19V18.5H1M8.25 10.5L11.25 14L14.25 10.5" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/></svg></div><div class="lbl">Dropdown</div></div></div></div>
+      <div class="lib-sec"><div class="lib-h">Extensions</div><div class="lib-grid"><div class="libcard"><div class="ico"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" preserveAspectRatio="xMidYMid meet" style="display:block"><path d="M6 14V14.01M10 14V14.01M14 14V14.01M6 17V17.01M10 17V17.01M14 17V17.01M2 5C2 4.46957 2.21071 3.96086 2.58579 3.58579C2.96086 3.21071 3.46957 3 4 3H16C16.5304 3 17.0391 3.21071 17.4142 3.58579C17.7893 3.96086 18 4.46957 18 5V19C18 19.5304 17.7893 20.0391 17.4142 20.4142C17.0391 20.7893 16.5304 21 16 21H4C3.46957 21 2.96086 20.7893 2.58579 20.4142C2.21071 20.0391 2 19.5304 2 19V5ZM6 8C6 7.73478 6.10536 7.48043 6.29289 7.29289C6.48043 7.10536 6.73478 7 7 7H13C13.2652 7 13.5196 7.10536 13.7071 7.29289C13.8946 7.48043 14 7.73478 14 8V9C14 9.26522 13.8946 9.51957 13.7071 9.70711C13.5196 9.89464 13.2652 10 13 10H7C6.73478 10 6.48043 9.89464 6.29289 9.70711C6.10536 9.51957 6 9.26522 6 9V8Z" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/></svg></div><div class="lbl">Calculator</div></div><div class="libcard"><div class="ico"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" preserveAspectRatio="xMidYMid meet" style="display:block"><path d="M19 11V8C19 7.46957 18.7893 6.96086 18.4142 6.58579C18.0391 6.21071 17.5304 6 17 6H11M14 3L11 6L14 9M1 13V16C1 16.5304 1.21071 17.0391 1.58579 17.4142C1.96086 17.7893 2.46957 18 3 18H9M6 21L9 18L6 15M1 6C1 6.79565 1.31607 7.55871 1.87868 8.12132C2.44129 8.68393 3.20435 9 4 9C4.79565 9 5.55871 8.68393 6.12132 8.12132C6.68393 7.55871 7 6.79565 7 6C7 5.20435 6.68393 4.44129 6.12132 3.87868C5.55871 3.31607 4.79565 3 4 3C3.20435 3 2.44129 3.31607 1.87868 3.87868C1.31607 4.44129 1 5.20435 1 6ZM13 18C13 18.7956 13.3161 19.5587 13.8787 20.1213C14.4413 20.6839 15.2044 21 16 21C16.7956 21 17.5587 20.6839 18.1213 20.1213C18.6839 19.5587 19 18.7956 19 18C19 17.2044 18.6839 16.4413 18.1213 15.8787C17.5587 15.3161 16.7956 15 16 15C15.2044 15 14.4413 15.3161 13.8787 15.8787C13.3161 16.4413 13 17.2044 13 18Z" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/></svg></div><div class="lbl">Converter</div></div></div></div>
+    </div>
+
+    <!-- canvas -->
+    <div class="canvas" id="canvas">
+
+      <!-- empty state: create your first block -->
+      <div class="emptyCreate" id="emptyCreate">
+        <div class="ec-illus"><svg width="250" height="120" viewBox="0 0 250 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g clip-path="url(#clip0_142_13394)">
+<rect x="66" y="13" width="117" height="145" rx="5" fill="white" stroke="#C2D4F4" stroke-width="2"/>
+<path d="M185.802 82.9461L194.044 82.846C195.297 84.5362 197.27 88.6335 195.145 91.5009C192.489 95.085 167.277 102.215 164.448 103.387C161.62 104.558 156.61 95.8882 157.521 94.6584C160.178 91.0715 169.524 88.3077 176.318 86.046C173.375 85.608 166.773 84.2007 163.905 82.0753C160.32 79.4185 168.562 79.3183 172.975 79.9753C176.506 80.5009 182.998 82.1749 185.802 82.9461Z" fill="white" stroke="black" stroke-width="0.865834" stroke-linejoin="round"/>
+<path d="M191.046 81.6005L239.954 59.6878C292.862 39.4319 267.123 73.2856 256.91 86.6271C248.74 97.3003 209.616 97.1031 191.075 95.6703L191.046 81.6005Z" fill="url(#paint0_linear_142_13394)"/>
+<rect x="85.3347" y="87.7249" width="90" height="14" rx="4" transform="rotate(-5.56113 85.3347 87.7249)" fill="#DFE9FB"/>
+<path d="M185.803 82.9455C182.998 82.1742 176.507 80.5002 172.976 79.9747C168.562 79.3177 160.32 79.4179 163.905 82.0746C166.774 84.2 173.376 85.6073 176.318 86.0453" stroke="black" stroke-width="0.865834" stroke-linejoin="round"/>
+<rect x="79" y="27" width="90" height="14" rx="2" fill="#DFE9FB"/>
+<rect x="79" y="49" width="90" height="14" rx="2" fill="#DFE9FB"/>
+</g>
+<defs>
+<linearGradient id="paint0_linear_142_13394" x1="192.561" y1="89.2567" x2="274" y2="51.5" gradientUnits="userSpaceOnUse">
+<stop stop-color="#D1E0FB"/><stop offset="0.875" stop-color="#E0EEFB"/></linearGradient>
+<clipPath id="clip0_142_13394"><path d="M0 6C0 2.68629 2.68629 0 6 0H244C247.314 0 250 2.68629 250 6V114C250 117.314 247.314 120 244 120H6C2.68629 120 0 117.314 0 114V6Z" fill="white"/></clipPath>
+</defs></svg></div>
+        <div class="ec-h">Create you first block</div>
+        <div class="ec-sub">Create blocks faster with <span class="kbd2">Shift</span> + <span class="kbd2">B</span></div>
+        <div class="ec-btn" id="createBtn">Create block</div>
+      </div>
+
+      <!-- block (revealed after Create block) -->
+      <div class="docwrap" id="docwrap" style="display:none">
+        <div class="docframe"><div class="block">
+          <div class="blockhead">
+            <div class="acc"><svg width="14" height="14" viewBox="0 0 9.5 5.5" fill="none" preserveAspectRatio="xMidYMid meet" style="display:block"><path d="M8.75 4.75L4.75 0.75L0.75 4.75" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" vector-effect="non-scaling-stroke"/></svg><svg width="14" height="14" viewBox="0 0 6.83333 12.1667" style="display:block;margin-left:4px" fill="none" preserveAspectRatio="xMidYMid meet"><path d="M1.41667 6.75C1.78486 6.75 2.08333 6.45152 2.08333 6.08333C2.08333 5.71514 1.78486 5.41667 1.41667 5.41667C1.04848 5.41667 0.75 5.71514 0.75 6.08333C0.75 6.45152 1.04848 6.75 1.41667 6.75Z" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" vector-effect="non-scaling-stroke"/><path d="M1.41667 2.08333C1.78486 2.08333 2.08333 1.78486 2.08333 1.41667C2.08333 1.04848 1.78486 0.75 1.41667 0.75C1.04848 0.75 0.75 1.04848 0.75 1.41667C0.75 1.78486 1.04848 2.08333 1.41667 2.08333Z" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" vector-effect="non-scaling-stroke"/><path d="M1.41667 11.4167C1.78486 11.4167 2.08333 11.1182 2.08333 10.75C2.08333 10.3818 1.78486 10.0833 1.41667 10.0833C1.04848 10.0833 0.75 10.3818 0.75 10.75C0.75 11.1182 1.04848 11.4167 1.41667 11.4167Z" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" vector-effect="non-scaling-stroke"/><path d="M5.41667 6.75C5.78486 6.75 6.08333 6.45152 6.08333 6.08333C6.08333 5.71514 5.78486 5.41667 5.41667 5.41667C5.04848 5.41667 4.75 5.71514 4.75 6.08333C4.75 6.45152 5.04848 6.75 5.41667 6.75Z" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" vector-effect="non-scaling-stroke"/><path d="M5.41667 2.08333C5.78486 2.08333 6.08333 1.78486 6.08333 1.41667C6.08333 1.04848 5.78486 0.75 5.41667 0.75C5.04848 0.75 4.75 1.04848 4.75 1.41667C4.75 1.78486 5.04848 2.08333 5.41667 2.08333Z" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" vector-effect="non-scaling-stroke"/><path d="M5.41667 11.4167C5.78486 11.4167 6.08333 11.1182 6.08333 10.75C6.08333 10.3818 5.78486 10.0833 5.41667 10.0833C5.04848 10.0833 4.75 10.3818 4.75 10.75C4.75 11.1182 5.04848 11.4167 5.41667 11.4167Z" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" vector-effect="non-scaling-stroke"/></svg></div>
+            <div class="blocktitle">Personal information</div>
+            <div class="morebtn" id="deleteBtn"><svg width="16" height="16" viewBox="0 0 13.5 14.8333" fill="none" preserveAspectRatio="xMidYMid meet" style="display:block"><path d="M0.75 3.41667H12.75M11.4167 3.41667V12.75C11.4167 13.4167 10.75 14.0833 10.0833 14.0833H3.41667C2.75 14.0833 2.08333 13.4167 2.08333 12.75V3.41667M4.08333 3.41667V2.08333C4.08333 1.41667 4.75 0.75 5.41667 0.75H8.08333C8.75 0.75 9.41667 1.41667 9.41667 2.08333V3.41667" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" vector-effect="non-scaling-stroke"/></svg></div>
+          </div>
+          <div class="bdivider"></div>
+
+          <div class="qlist">
+            <!-- empty drop zone -->
+            <div class="dropzone" id="dropzone">
+              <div class="dzin">
+                <span class="dztext dzidle">Drag and drop component here or click &ldquo;Add question&rdquo; button</span>
+                <span class="dzdrag" style="align-items:center;gap:5.5px">
+                  <span class="dztext">Drop component here.</span>
+                  <span class="dztext">Tip: Hold</span>
+                  <span class="kbd"><span>R</span></span>
+                  <span class="dztext">to make question required.</span>
+                </span>
+              </div>
+              <svg class="dzborder"><rect/></svg>
+            </div>
+            <!-- dropped question (hidden until drop) -->
+            <div class="droppedQ" id="droppedQ" style="display:none">
+              <div class="qdesigner" id="qdes">
+                <div class="focus"></div>
+                <div class="accbtn"><svg width="16" height="16" viewBox="0 0 6.83333 12.1667" fill="none" preserveAspectRatio="xMidYMid meet" style="display:block"><path d="M1.41667 6.75C1.78486 6.75 2.08333 6.45152 2.08333 6.08333C2.08333 5.71514 1.78486 5.41667 1.41667 5.41667C1.04848 5.41667 0.75 5.71514 0.75 6.08333C0.75 6.45152 1.04848 6.75 1.41667 6.75Z" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" vector-effect="non-scaling-stroke"/><path d="M1.41667 2.08333C1.78486 2.08333 2.08333 1.78486 2.08333 1.41667C2.08333 1.04848 1.78486 0.75 1.41667 0.75C1.04848 0.75 0.75 1.04848 0.75 1.41667C0.75 1.78486 1.04848 2.08333 1.41667 2.08333Z" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" vector-effect="non-scaling-stroke"/><path d="M1.41667 11.4167C1.78486 11.4167 2.08333 11.1182 2.08333 10.75C2.08333 10.3818 1.78486 10.0833 1.41667 10.0833C1.04848 10.0833 0.75 10.3818 0.75 10.75C0.75 11.1182 1.04848 11.4167 1.41667 11.4167Z" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" vector-effect="non-scaling-stroke"/><path d="M5.41667 6.75C5.78486 6.75 6.08333 6.45152 6.08333 6.08333C6.08333 5.71514 5.78486 5.41667 5.41667 5.41667C5.04848 5.41667 4.75 5.71514 4.75 6.08333C4.75 6.45152 5.04848 6.75 5.41667 6.75Z" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" vector-effect="non-scaling-stroke"/><path d="M5.41667 2.08333C5.78486 2.08333 6.08333 1.78486 6.08333 1.41667C6.08333 1.04848 5.78486 0.75 5.41667 0.75C5.04848 0.75 4.75 1.04848 4.75 1.41667C4.75 1.78486 5.04848 2.08333 5.41667 2.08333Z" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" vector-effect="non-scaling-stroke"/><path d="M5.41667 11.4167C5.78486 11.4167 6.08333 11.1182 6.08333 10.75C6.08333 10.3818 5.78486 10.0833 5.41667 10.0833C5.04848 10.0833 4.75 10.3818 4.75 10.75C4.75 11.1182 5.04848 11.4167 5.41667 11.4167Z" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" vector-effect="non-scaling-stroke"/></svg></div>
+                <div class="qcontent">
+                  <div class="qtitle" id="qTitle">Untitled question</div>
+                  <div class="chipsgrp"><span class="chip-pill" id="chip1">Option 1</span><span class="chip-pill" id="chip2">Option 2</span><span class="chip-pill addchip" id="chip3" style="display:none">Non-smoker</span></div>
+                </div>
+                <div class="morebtn"><svg width="16" height="16" viewBox="0 0 12.1667 2.83333" fill="none" preserveAspectRatio="xMidYMid meet" style="display:block"><path d="M6.08333 2.08333C6.45152 2.08333 6.75 1.78486 6.75 1.41667C6.75 1.04848 6.45152 0.75 6.08333 0.75C5.71514 0.75 5.41667 1.04848 5.41667 1.41667C5.41667 1.78486 5.71514 2.08333 6.08333 2.08333Z" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" vector-effect="non-scaling-stroke"/><path d="M10.75 2.08333C11.1182 2.08333 11.4167 1.78486 11.4167 1.41667C11.4167 1.04848 11.1182 0.75 10.75 0.75C10.3818 0.75 10.0833 1.04848 10.0833 1.41667C10.0833 1.78486 10.3818 2.08333 10.75 2.08333Z" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" vector-effect="non-scaling-stroke"/><path d="M1.41667 2.08333C1.78486 2.08333 2.08333 1.78486 2.08333 1.41667C2.08333 1.04848 1.78486 0.75 1.41667 0.75C1.04848 0.75 0.75 1.04848 0.75 1.41667C0.75 1.78486 1.04848 2.08333 1.41667 2.08333Z" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" vector-effect="non-scaling-stroke"/></svg></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="addq">Add question</div>
+        </div></div>
+        <div class="addblock">Add block</div>
+      </div>
+    </div>
+
+    <!-- properties panel (always visible; empty until a component is selected) -->
+    <div class="props" id="props">
+     <div class="props-content">
+      <div class="psec">
+        <div class="h">General</div>
+        <div class="combo"><span class="lbl">Coding</span>
+          <div class="field" id="fCode">
+            <span class="val isph" id="pCode">Untitled question</span>
+            <span class="closex"><svg width="14" height="14" viewBox="0 0 9.5 9.5" fill="none" preserveAspectRatio="xMidYMid meet" style="display:block"><path d="M8.75 0.75L0.75 8.75M0.75 0.75L8.75 8.75" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" vector-effect="non-scaling-stroke"/></svg></span>
+            <span class="vdiv"></span><svg width="12" height="12" viewBox="0 0 5.5 9.5" fill="none" preserveAspectRatio="xMidYMid meet" style="display:block"><path d="M4.75 2.75L2.75 0.75L0.75 2.75M0.75 6.75L2.75 8.75L4.75 6.75" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" vector-effect="non-scaling-stroke"/></svg>
+          </div>
+        </div>
+        <div class="switch"><svg width="44" height="24" viewBox="0 0 44 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M0 12C0 5.37258 5.37258 0 12 0H32C38.6274 0 44 5.37258 44 12C44 18.6274 38.6274 24 32 24H12C5.37258 24 0 18.6274 0 12Z" fill="#3E5BFD"/><circle cx="32" cy="12" r="10" fill="#FEFEFE"/></svg><span class="swlabel">Use code as question</span></div>
+      </div>
+      <div class="pdivider"></div>
+      <div class="psec">
+        <div class="h">Choice options</div>
+        <div class="optrow"><div class="grip"><svg width="16" height="16" viewBox="0 0 6.83333 12.1667" fill="none" preserveAspectRatio="xMidYMid meet" style="display:block"><path d="M1.41667 6.75C1.78486 6.75 2.08333 6.45152 2.08333 6.08333C2.08333 5.71514 1.78486 5.41667 1.41667 5.41667C1.04848 5.41667 0.75 5.71514 0.75 6.08333C0.75 6.45152 1.04848 6.75 1.41667 6.75Z" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" vector-effect="non-scaling-stroke"/><path d="M1.41667 2.08333C1.78486 2.08333 2.08333 1.78486 2.08333 1.41667C2.08333 1.04848 1.78486 0.75 1.41667 0.75C1.04848 0.75 0.75 1.04848 0.75 1.41667C0.75 1.78486 1.04848 2.08333 1.41667 2.08333Z" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" vector-effect="non-scaling-stroke"/><path d="M1.41667 11.4167C1.78486 11.4167 2.08333 11.1182 2.08333 10.75C2.08333 10.3818 1.78486 10.0833 1.41667 10.0833C1.04848 10.0833 0.75 10.3818 0.75 10.75C0.75 11.1182 1.04848 11.4167 1.41667 11.4167Z" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" vector-effect="non-scaling-stroke"/><path d="M5.41667 6.75C5.78486 6.75 6.08333 6.45152 6.08333 6.08333C6.08333 5.71514 5.78486 5.41667 5.41667 5.41667C5.04848 5.41667 4.75 5.71514 4.75 6.08333C4.75 6.45152 5.04848 6.75 5.41667 6.75Z" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" vector-effect="non-scaling-stroke"/><path d="M5.41667 2.08333C5.78486 2.08333 6.08333 1.78486 6.08333 1.41667C6.08333 1.04848 5.78486 0.75 5.41667 0.75C5.04848 0.75 4.75 1.04848 4.75 1.41667C4.75 1.78486 5.04848 2.08333 5.41667 2.08333Z" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" vector-effect="non-scaling-stroke"/><path d="M5.41667 11.4167C5.78486 11.4167 6.08333 11.1182 6.08333 10.75C6.08333 10.3818 5.78486 10.0833 5.41667 10.0833C5.04848 10.0833 4.75 10.3818 4.75 10.75C4.75 11.1182 5.04848 11.4167 5.41667 11.4167Z" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" vector-effect="non-scaling-stroke"/></svg></div><div class="field" id="fOpt1"><span class="val isph" id="pOpt1">Option 1</span></div><div class="morebtn"><svg width="16" height="16" viewBox="0 0 12.1667 2.83333" fill="none" preserveAspectRatio="xMidYMid meet" style="display:block"><path d="M6.08333 2.08333C6.45152 2.08333 6.75 1.78486 6.75 1.41667C6.75 1.04848 6.45152 0.75 6.08333 0.75C5.71514 0.75 5.41667 1.04848 5.41667 1.41667C5.41667 1.78486 5.71514 2.08333 6.08333 2.08333Z" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" vector-effect="non-scaling-stroke"/><path d="M10.75 2.08333C11.1182 2.08333 11.4167 1.78486 11.4167 1.41667C11.4167 1.04848 11.1182 0.75 10.75 0.75C10.3818 0.75 10.0833 1.04848 10.0833 1.41667C10.0833 1.78486 10.3818 2.08333 10.75 2.08333Z" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" vector-effect="non-scaling-stroke"/><path d="M1.41667 2.08333C1.78486 2.08333 2.08333 1.78486 2.08333 1.41667C2.08333 1.04848 1.78486 0.75 1.41667 0.75C1.04848 0.75 0.75 1.04848 0.75 1.41667C0.75 1.78486 1.04848 2.08333 1.41667 2.08333Z" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" vector-effect="non-scaling-stroke"/></svg></div></div>
+        <div class="optrow"><div class="grip"><svg width="16" height="16" viewBox="0 0 6.83333 12.1667" fill="none" preserveAspectRatio="xMidYMid meet" style="display:block"><path d="M1.41667 6.75C1.78486 6.75 2.08333 6.45152 2.08333 6.08333C2.08333 5.71514 1.78486 5.41667 1.41667 5.41667C1.04848 5.41667 0.75 5.71514 0.75 6.08333C0.75 6.45152 1.04848 6.75 1.41667 6.75Z" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" vector-effect="non-scaling-stroke"/><path d="M1.41667 2.08333C1.78486 2.08333 2.08333 1.78486 2.08333 1.41667C2.08333 1.04848 1.78486 0.75 1.41667 0.75C1.04848 0.75 0.75 1.04848 0.75 1.41667C0.75 1.78486 1.04848 2.08333 1.41667 2.08333Z" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" vector-effect="non-scaling-stroke"/><path d="M1.41667 11.4167C1.78486 11.4167 2.08333 11.1182 2.08333 10.75C2.08333 10.3818 1.78486 10.0833 1.41667 10.0833C1.04848 10.0833 0.75 10.3818 0.75 10.75C0.75 11.1182 1.04848 11.4167 1.41667 11.4167Z" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" vector-effect="non-scaling-stroke"/><path d="M5.41667 6.75C5.78486 6.75 6.08333 6.45152 6.08333 6.08333C6.08333 5.71514 5.78486 5.41667 5.41667 5.41667C5.04848 5.41667 4.75 5.71514 4.75 6.08333C4.75 6.45152 5.04848 6.75 5.41667 6.75Z" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" vector-effect="non-scaling-stroke"/><path d="M5.41667 2.08333C5.78486 2.08333 6.08333 1.78486 6.08333 1.41667C6.08333 1.04848 5.78486 0.75 5.41667 0.75C5.04848 0.75 4.75 1.04848 4.75 1.41667C4.75 1.78486 5.04848 2.08333 5.41667 2.08333Z" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" vector-effect="non-scaling-stroke"/><path d="M5.41667 11.4167C5.78486 11.4167 6.08333 11.1182 6.08333 10.75C6.08333 10.3818 5.78486 10.0833 5.41667 10.0833C5.04848 10.0833 4.75 10.3818 4.75 10.75C4.75 11.1182 5.04848 11.4167 5.41667 11.4167Z" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" vector-effect="non-scaling-stroke"/></svg></div><div class="field" id="fOpt2"><span class="val isph" id="pOpt2">Option 2</span></div><div class="morebtn"><svg width="16" height="16" viewBox="0 0 12.1667 2.83333" fill="none" preserveAspectRatio="xMidYMid meet" style="display:block"><path d="M6.08333 2.08333C6.45152 2.08333 6.75 1.78486 6.75 1.41667C6.75 1.04848 6.45152 0.75 6.08333 0.75C5.71514 0.75 5.41667 1.04848 5.41667 1.41667C5.41667 1.78486 5.71514 2.08333 6.08333 2.08333Z" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" vector-effect="non-scaling-stroke"/><path d="M10.75 2.08333C11.1182 2.08333 11.4167 1.78486 11.4167 1.41667C11.4167 1.04848 11.1182 0.75 10.75 0.75C10.3818 0.75 10.0833 1.04848 10.0833 1.41667C10.0833 1.78486 10.3818 2.08333 10.75 2.08333Z" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" vector-effect="non-scaling-stroke"/><path d="M1.41667 2.08333C1.78486 2.08333 2.08333 1.78486 2.08333 1.41667C2.08333 1.04848 1.78486 0.75 1.41667 0.75C1.04848 0.75 0.75 1.04848 0.75 1.41667C0.75 1.78486 1.04848 2.08333 1.41667 2.08333Z" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" vector-effect="non-scaling-stroke"/></svg></div></div>
+        <div class="optrow addopt" id="opt3row" style="display:none"><div class="grip"><svg width="16" height="16" viewBox="0 0 6.83333 12.1667" fill="none" preserveAspectRatio="xMidYMid meet" style="display:block"><path d="M1.41667 6.75C1.78486 6.75 2.08333 6.45152 2.08333 6.08333C2.08333 5.71514 1.78486 5.41667 1.41667 5.41667C1.04848 5.41667 0.75 5.71514 0.75 6.08333C0.75 6.45152 1.04848 6.75 1.41667 6.75Z" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" vector-effect="non-scaling-stroke"/><path d="M1.41667 2.08333C1.78486 2.08333 2.08333 1.78486 2.08333 1.41667C2.08333 1.04848 1.78486 0.75 1.41667 0.75C1.04848 0.75 0.75 1.04848 0.75 1.41667C0.75 1.78486 1.04848 2.08333 1.41667 2.08333Z" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" vector-effect="non-scaling-stroke"/><path d="M1.41667 11.4167C1.78486 11.4167 2.08333 11.1182 2.08333 10.75C2.08333 10.3818 1.78486 10.0833 1.41667 10.0833C1.04848 10.0833 0.75 10.3818 0.75 10.75C0.75 11.1182 1.04848 11.4167 1.41667 11.4167Z" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" vector-effect="non-scaling-stroke"/><path d="M5.41667 6.75C5.78486 6.75 6.08333 6.45152 6.08333 6.08333C6.08333 5.71514 5.78486 5.41667 5.41667 5.41667C5.04848 5.41667 4.75 5.71514 4.75 6.08333C4.75 6.45152 5.04848 6.75 5.41667 6.75Z" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" vector-effect="non-scaling-stroke"/><path d="M5.41667 2.08333C5.78486 2.08333 6.08333 1.78486 6.08333 1.41667C6.08333 1.04848 5.78486 0.75 5.41667 0.75C5.04848 0.75 4.75 1.04848 4.75 1.41667C4.75 1.78486 5.04848 2.08333 5.41667 2.08333Z" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" vector-effect="non-scaling-stroke"/><path d="M5.41667 11.4167C5.78486 11.4167 6.08333 11.1182 6.08333 10.75C6.08333 10.3818 5.78486 10.0833 5.41667 10.0833C5.04848 10.0833 4.75 10.3818 4.75 10.75C4.75 11.1182 5.04848 11.4167 5.41667 11.4167Z" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" vector-effect="non-scaling-stroke"/></svg></div><div class="field"><span class="val" id="pOpt3">Non-smoker</span></div><div class="morebtn"><svg width="16" height="16" viewBox="0 0 12.1667 2.83333" fill="none" preserveAspectRatio="xMidYMid meet" style="display:block"><path d="M6.08333 2.08333C6.45152 2.08333 6.75 1.78486 6.75 1.41667C6.75 1.04848 6.45152 0.75 6.08333 0.75C5.71514 0.75 5.41667 1.04848 5.41667 1.41667C5.41667 1.78486 5.71514 2.08333 6.08333 2.08333Z" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" vector-effect="non-scaling-stroke"/><path d="M10.75 2.08333C11.1182 2.08333 11.4167 1.78486 11.4167 1.41667C11.4167 1.04848 11.1182 0.75 10.75 0.75C10.3818 0.75 10.0833 1.04848 10.0833 1.41667C10.0833 1.78486 10.3818 2.08333 10.75 2.08333Z" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" vector-effect="non-scaling-stroke"/><path d="M1.41667 2.08333C1.78486 2.08333 2.08333 1.78486 2.08333 1.41667C2.08333 1.04848 1.78486 0.75 1.41667 0.75C1.04848 0.75 0.75 1.04848 0.75 1.41667C0.75 1.78486 1.04848 2.08333 1.41667 2.08333Z" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" vector-effect="non-scaling-stroke"/></svg></div></div>
+        <div class="optrow"><div class="field" id="fNew"><span class="val isph" id="pNew">New option...</span></div><div class="morebtn" id="addOptBtn"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" style="display:block"><path d="M8 2V14M2 8H14" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div></div>
+        <div class="switch"><svg width="44" height="24" viewBox="0 0 44 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 0.5H32C38.3513 0.5 43.5 5.64873 43.5 12C43.5 18.3513 38.3513 23.5 32 23.5H12C5.64873 23.5 0.5 18.3513 0.5 12C0.5 5.64873 5.64873 0.5 12 0.5Z" fill="#FEFEFE"/><path d="M12 0.5H32C38.3513 0.5 43.5 5.64873 43.5 12C43.5 18.3513 38.3513 23.5 32 23.5H12C5.64873 23.5 0.5 18.3513 0.5 12C0.5 5.64873 5.64873 0.5 12 0.5Z" stroke="#C8C8DE"/><circle cx="12" cy="12" r="6" fill="#9CA3AF"/></svg><span class="swlabel">"Add other" option</span></div>
+      </div>
+      <div class="pdivider"></div>
+      <div class="psec">
+        <div class="h">Automation</div>
+        <div class="switch"><svg width="44" height="24" viewBox="0 0 44 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 0.5H32C38.3513 0.5 43.5 5.64873 43.5 12C43.5 18.3513 38.3513 23.5 32 23.5H12C5.64873 23.5 0.5 18.3513 0.5 12C0.5 5.64873 5.64873 0.5 12 0.5Z" fill="#FEFEFE"/><path d="M12 0.5H32C38.3513 0.5 43.5 5.64873 43.5 12C43.5 18.3513 38.3513 23.5 32 23.5H12C5.64873 23.5 0.5 18.3513 0.5 12C0.5 5.64873 5.64873 0.5 12 0.5Z" stroke="#C8C8DE"/><circle cx="12" cy="12" r="6" fill="#9CA3AF"/></svg><span class="swlabel">Conditional logic</span></div>
+        <div class="switch"><svg width="44" height="24" viewBox="0 0 44 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 0.5H32C38.3513 0.5 43.5 5.64873 43.5 12C43.5 18.3513 38.3513 23.5 32 23.5H12C5.64873 23.5 0.5 18.3513 0.5 12C0.5 5.64873 5.64873 0.5 12 0.5Z" fill="#FEFEFE"/><path d="M12 0.5H32C38.3513 0.5 43.5 5.64873 43.5 12C43.5 18.3513 38.3513 23.5 32 23.5H12C5.64873 23.5 0.5 18.3513 0.5 12C0.5 5.64873 5.64873 0.5 12 0.5Z" stroke="#C8C8DE"/><circle cx="12" cy="12" r="6" fill="#9CA3AF"/></svg><span class="swlabel">Text generation</span></div>
+      </div>
+     </div>
+    </div>
+
+    <!-- floating drag preview: full "Untitled question" row -->
+    <div class="dragQ" id="preview">
+      <div class="accbtn"><svg width="16" height="16" viewBox="0 0 6.83333 12.1667" fill="none" preserveAspectRatio="xMidYMid meet" style="display:block"><path d="M1.41667 6.75C1.78486 6.75 2.08333 6.45152 2.08333 6.08333C2.08333 5.71514 1.78486 5.41667 1.41667 5.41667C1.04848 5.41667 0.75 5.71514 0.75 6.08333C0.75 6.45152 1.04848 6.75 1.41667 6.75Z" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" vector-effect="non-scaling-stroke"/><path d="M1.41667 2.08333C1.78486 2.08333 2.08333 1.78486 2.08333 1.41667C2.08333 1.04848 1.78486 0.75 1.41667 0.75C1.04848 0.75 0.75 1.04848 0.75 1.41667C0.75 1.78486 1.04848 2.08333 1.41667 2.08333Z" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" vector-effect="non-scaling-stroke"/><path d="M1.41667 11.4167C1.78486 11.4167 2.08333 11.1182 2.08333 10.75C2.08333 10.3818 1.78486 10.0833 1.41667 10.0833C1.04848 10.0833 0.75 10.3818 0.75 10.75C0.75 11.1182 1.04848 11.4167 1.41667 11.4167Z" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" vector-effect="non-scaling-stroke"/><path d="M5.41667 6.75C5.78486 6.75 6.08333 6.45152 6.08333 6.08333C6.08333 5.71514 5.78486 5.41667 5.41667 5.41667C5.04848 5.41667 4.75 5.71514 4.75 6.08333C4.75 6.45152 5.04848 6.75 5.41667 6.75Z" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" vector-effect="non-scaling-stroke"/><path d="M5.41667 2.08333C5.78486 2.08333 6.08333 1.78486 6.08333 1.41667C6.08333 1.04848 5.78486 0.75 5.41667 0.75C5.04848 0.75 4.75 1.04848 4.75 1.41667C4.75 1.78486 5.04848 2.08333 5.41667 2.08333Z" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" vector-effect="non-scaling-stroke"/><path d="M5.41667 11.4167C5.78486 11.4167 6.08333 11.1182 6.08333 10.75C6.08333 10.3818 5.78486 10.0833 5.41667 10.0833C5.04848 10.0833 4.75 10.3818 4.75 10.75C4.75 11.1182 5.04848 11.4167 5.41667 11.4167Z" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" vector-effect="non-scaling-stroke"/></svg></div>
+      <div class="qtitle">Untitled question</div>
+      <div class="chipsgrp"><span class="chip-pill">Option 1</span><span class="chip-pill">Option 2</span></div>
+      <div class="morebtn"><svg width="16" height="16" viewBox="0 0 12.1667 2.83333" fill="none" preserveAspectRatio="xMidYMid meet" style="display:block"><path d="M6.08333 2.08333C6.45152 2.08333 6.75 1.78486 6.75 1.41667C6.75 1.04848 6.45152 0.75 6.08333 0.75C5.71514 0.75 5.41667 1.04848 5.41667 1.41667C5.41667 1.78486 5.71514 2.08333 6.08333 2.08333Z" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" vector-effect="non-scaling-stroke"/><path d="M10.75 2.08333C11.1182 2.08333 11.4167 1.78486 11.4167 1.41667C11.4167 1.04848 11.1182 0.75 10.75 0.75C10.3818 0.75 10.0833 1.04848 10.0833 1.41667C10.0833 1.78486 10.3818 2.08333 10.75 2.08333Z" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" vector-effect="non-scaling-stroke"/><path d="M1.41667 2.08333C1.78486 2.08333 2.08333 1.78486 2.08333 1.41667C2.08333 1.04848 1.78486 0.75 1.41667 0.75C1.04848 0.75 0.75 1.04848 0.75 1.41667C0.75 1.78486 1.04848 2.08333 1.41667 2.08333Z" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" vector-effect="non-scaling-stroke"/></svg></div>
+    </div>
+
+    <!-- animated cursor -->
+    <div class="cursor" id="cursor">
+      <span class="lyr arrow"><svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M5 2.5L5 19.5L9.4 15.3L12.1 21L14.7 19.8L12 14.2L18 14.2Z" fill="#16202B" stroke="#fefefe" stroke-width="1.4" stroke-linejoin="round"/></svg></span>
+      <span class="lyr open"><svg width="31" height="31" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+<path d="M10.3884 8.20478C11.1414 7.90358 12.4968 8.05418 12.9486 8.95777C13.2498 9.71075 13.551 10.7649 13.551 10.6143C13.551 10.0119 13.551 8.80717 13.7016 8.20478C13.8522 7.75299 14.1534 7.3012 14.7558 7.1506C15.2076 7 15.6594 7 16.1111 7C16.5629 7.1506 17.0147 7.45179 17.3159 7.75299C17.9183 8.65657 17.9183 10.6143 17.9183 10.4637C18.0689 10.0119 18.0689 8.65657 18.3701 8.05418C18.5207 7.75299 19.1231 7.45179 19.4243 7.30119C19.8761 7.1506 20.4785 7.1506 20.9303 7.30119C21.2315 7.30119 21.8338 7.75299 21.9844 8.05418C22.2856 8.50597 22.4362 10.0119 22.5868 10.6143C22.5868 10.7649 22.7374 10.0119 23.0386 9.56016C23.641 8.65657 25.7494 8.35538 25.9 10.4637C25.9 11.5179 25.9 11.3673 25.9 12.1203C25.9 12.8733 25.9 13.3251 25.9 13.9275C25.9 14.5299 25.7494 15.8852 25.5988 16.4876C25.4482 16.9394 24.9964 17.9936 24.5446 18.596C24.5446 18.596 22.888 20.4032 22.7374 21.3068C22.5868 22.2103 22.5868 22.2103 22.5868 22.8127C22.5868 23.4151 22.7374 24.1681 22.7374 24.1681C22.7374 24.1681 21.5327 24.3187 20.9303 24.1681C20.3279 24.0175 19.5749 22.9633 19.4243 22.5115C19.1231 22.0597 18.6713 22.0597 18.3701 22.5115C18.0689 23.1139 17.3159 24.1681 16.8641 24.1681C15.8099 24.3187 13.7016 24.1681 12.1956 24.1681C12.1956 24.1681 12.4968 22.6621 11.8944 22.0597C11.4426 21.608 10.6896 20.855 10.2378 20.4032L9.03306 19.0478C8.58127 18.4454 7.52709 17.6924 7.2259 16.0358C6.9247 14.6805 6.9247 13.9275 7.2259 13.3251C7.52709 12.7227 8.28008 12.4215 8.58127 12.4215C8.88247 12.4215 9.63546 12.4215 9.93665 12.5721C10.2378 12.7227 10.3884 12.8733 10.6896 13.1745C10.9908 13.6263 11.1414 13.9275 10.9908 13.3251C10.8402 12.8733 10.539 12.4215 10.3884 11.8191C10.2378 11.2167 9.78605 10.4637 9.78605 9.56016C9.03306 9.56016 9.18366 8.65657 10.3884 8.20478Z" fill="white"/>
+<path d="M10.3884 8.20478C11.1414 7.90358 12.4968 8.05418 12.9486 8.95777C13.2498 9.71075 13.551 10.7649 13.551 10.6143C13.551 10.0119 13.551 8.80717 13.7016 8.20478C13.8522 7.75299 14.1534 7.3012 14.7558 7.1506C15.2076 7 15.6594 7 16.1111 7C16.5629 7.1506 17.0147 7.45179 17.3159 7.75299C17.9183 8.65657 17.9183 10.6143 17.9183 10.4637C18.0689 10.0119 18.0689 8.65657 18.3701 8.05418C18.5207 7.75299 19.1231 7.45179 19.4243 7.30119C19.8761 7.1506 20.4785 7.1506 20.9303 7.30119C21.2315 7.30119 21.8338 7.75299 21.9844 8.05418C22.2856 8.50597 22.4362 10.0119 22.5868 10.6143C22.5868 10.7649 22.7374 10.0119 23.0386 9.56016C23.641 8.65657 25.7494 8.35538 25.9 10.4637C25.9 11.5179 25.9 11.3673 25.9 12.1203C25.9 12.8733 25.9 13.3251 25.9 13.9275C25.9 14.5299 25.7494 15.8852 25.5988 16.4876C25.4482 16.9394 24.9964 17.9936 24.5446 18.596C24.5446 18.596 22.888 20.4032 22.7374 21.3068C22.5868 22.2103 22.5868 22.2103 22.5868 22.8127C22.5868 23.4151 22.7374 24.1681 22.7374 24.1681C22.7374 24.1681 21.5327 24.3187 20.9303 24.1681C20.3279 24.0175 19.5749 22.9633 19.4243 22.5115C19.1231 22.0597 18.6713 22.0597 18.3701 22.5115C18.0689 23.1139 17.3159 24.1681 16.8641 24.1681C15.8099 24.3187 13.7016 24.1681 12.1956 24.1681C12.1956 24.1681 12.4968 22.6621 11.8944 22.0597C11.4426 21.608 10.6896 20.855 10.2378 20.4032L9.03306 19.0478C8.58127 18.4454 7.52709 17.6924 7.2259 16.0358C6.9247 14.6805 6.9247 13.9275 7.2259 13.3251C7.52709 12.7227 8.28008 12.4215 8.58127 12.4215C8.88247 12.4215 9.63546 12.4215 9.93665 12.5721C10.2378 12.7227 10.3884 12.8733 10.6896 13.1745C10.9908 13.6263 11.1414 13.9275 10.9908 13.3251C10.8402 12.8733 10.539 12.4215 10.3884 11.8191C10.2378 11.2167 9.78605 10.4637 9.78605 9.56016C9.03306 9.56016 9.18366 8.65657 10.3884 8.20478Z" stroke="black" stroke-linejoin="round"/>
+<path d="M20.9303 19.8007V14.6804" stroke="black" stroke-linecap="round"/>
+<path d="M17.9183 19.8007L17.7677 14.6804" stroke="black" stroke-linecap="round"/>
+<path d="M14.9064 14.6804V19.8007" stroke="black" stroke-linecap="round"/>
+</svg></span>
+      <span class="lyr grabh"><svg width="31" height="31" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+<path d="M10.3884 8.20478C11.1414 7.90358 12.4968 8.05418 12.9486 8.95777C13.2498 9.71075 13.551 10.7649 13.551 10.6143C13.551 10.0119 13.551 8.80717 13.7016 8.20478C13.8522 7.75299 14.1534 7.3012 14.7558 7.1506C15.2076 7 15.6594 7 16.1111 7C16.5629 7.1506 17.0147 7.45179 17.3159 7.75299C17.9183 8.65657 17.9183 10.6143 17.9183 10.4637C18.0689 10.0119 18.0689 8.65657 18.3701 8.05418C18.5207 7.75299 19.1231 7.45179 19.4243 7.30119C19.8761 7.1506 20.4785 7.1506 20.9303 7.30119C21.2315 7.30119 21.8338 7.75299 21.9844 8.05418C22.2856 8.50597 22.4362 10.0119 22.5868 10.6143C22.5868 10.7649 22.7374 10.0119 23.0386 9.56016C23.641 8.65657 25.7494 8.35538 25.9 10.4637C25.9 11.5179 25.9 11.3673 25.9 12.1203C25.9 12.8733 25.9 13.3251 25.9 13.9275C25.9 14.5299 25.7494 15.8852 25.5988 16.4876C25.4482 16.9394 24.9964 17.9936 24.5446 18.596C24.5446 18.596 22.888 20.4032 22.7374 21.3068C22.5868 22.2103 22.5868 22.2103 22.5868 22.8127C22.5868 23.4151 22.7374 24.1681 22.7374 24.1681C22.7374 24.1681 21.5327 24.3187 20.9303 24.1681C20.3279 24.0175 19.5749 22.9633 19.4243 22.5115C19.1231 22.0597 18.6713 22.0597 18.3701 22.5115C18.0689 23.1139 17.3159 24.1681 16.8641 24.1681C15.8099 24.3187 13.7016 24.1681 12.1956 24.1681C12.1956 24.1681 12.4968 22.6621 11.8944 22.0597C11.4426 21.608 10.6896 20.855 10.2378 20.4032L9.03306 19.0478C8.58127 18.4454 7.52709 17.6924 7.2259 16.0358C6.9247 14.6805 6.9247 13.9275 7.2259 13.3251C7.52709 12.7227 8.28008 12.4215 8.58127 12.4215C8.88247 12.4215 9.63546 12.4215 9.93665 12.5721C10.2378 12.7227 10.3884 12.8733 10.6896 13.1745C10.9908 13.6263 11.1414 13.9275 10.9908 13.3251C10.8402 12.8733 10.539 12.4215 10.3884 11.8191C10.2378 11.2167 9.78605 10.4637 9.78605 9.56016C9.03306 9.56016 9.18366 8.65657 10.3884 8.20478Z" fill="white"/>
+<path d="M10.3884 8.20478C11.1414 7.90358 12.4968 8.05418 12.9486 8.95777C13.2498 9.71075 13.551 10.7649 13.551 10.6143C13.551 10.0119 13.551 8.80717 13.7016 8.20478C13.8522 7.75299 14.1534 7.3012 14.7558 7.1506C15.2076 7 15.6594 7 16.1111 7C16.5629 7.1506 17.0147 7.45179 17.3159 7.75299C17.9183 8.65657 17.9183 10.6143 17.9183 10.4637C18.0689 10.0119 18.0689 8.65657 18.3701 8.05418C18.5207 7.75299 19.1231 7.45179 19.4243 7.30119C19.8761 7.1506 20.4785 7.1506 20.9303 7.30119C21.2315 7.30119 21.8338 7.75299 21.9844 8.05418C22.2856 8.50597 22.4362 10.0119 22.5868 10.6143C22.5868 10.7649 22.7374 10.0119 23.0386 9.56016C23.641 8.65657 25.7494 8.35538 25.9 10.4637C25.9 11.5179 25.9 11.3673 25.9 12.1203C25.9 12.8733 25.9 13.3251 25.9 13.9275C25.9 14.5299 25.7494 15.8852 25.5988 16.4876C25.4482 16.9394 24.9964 17.9936 24.5446 18.596C24.5446 18.596 22.888 20.4032 22.7374 21.3068C22.5868 22.2103 22.5868 22.2103 22.5868 22.8127C22.5868 23.4151 22.7374 24.1681 22.7374 24.1681C22.7374 24.1681 21.5327 24.3187 20.9303 24.1681C20.3279 24.0175 19.5749 22.9633 19.4243 22.5115C19.1231 22.0597 18.6713 22.0597 18.3701 22.5115C18.0689 23.1139 17.3159 24.1681 16.8641 24.1681C15.8099 24.3187 13.7016 24.1681 12.1956 24.1681C12.1956 24.1681 12.4968 22.6621 11.8944 22.0597C11.4426 21.608 10.6896 20.855 10.2378 20.4032L9.03306 19.0478C8.58127 18.4454 7.52709 17.6924 7.2259 16.0358C6.9247 14.6805 6.9247 13.9275 7.2259 13.3251C7.52709 12.7227 8.28008 12.4215 8.58127 12.4215C8.88247 12.4215 9.63546 12.4215 9.93665 12.5721C10.2378 12.7227 10.3884 12.8733 10.6896 13.1745C10.9908 13.6263 11.1414 13.9275 10.9908 13.3251C10.8402 12.8733 10.539 12.4215 10.3884 11.8191C10.2378 11.2167 9.78605 10.4637 9.78605 9.56016C9.03306 9.56016 9.18366 8.65657 10.3884 8.20478Z" stroke="black" stroke-linejoin="round"/>
+<path d="M20.9303 19.8007V14.6804" stroke="black" stroke-linecap="round"/>
+<path d="M17.9183 19.8007L17.7677 14.6804" stroke="black" stroke-linecap="round"/>
+<path d="M14.9064 14.6804V19.8007" stroke="black" stroke-linecap="round"/>
+</svg></span>
+    </div>
+
+  </div>
+ </div>
+</div></div></div>
+
+<script>
+const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const sleep = ms => new Promise(r=>setTimeout(r,ms));
+const raf2 = () => new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
+const $ = id => document.getElementById(id);
+
+function fit(){ const f=document.querySelector('.frame'); $('scaler').style.transform='scale('+(f.clientWidth/1280)+')'; }
+addEventListener('resize',fit); fit(); new ResizeObserver(fit).observe(document.querySelector('.frame'));
+
+const app=document.querySelector('.app'), stage=document.querySelector('.body2'),
+      camera=$('camera'), cursor=$('cursor'), preview=$('preview'),
+      chipCard=$('chipCard'), dropzone=$('dropzone'), droppedQ=$('droppedQ'), qdes=$('qdes'),
+      canvas=$('canvas'), props=$('props'), emptyCreate=$('emptyCreate'), docwrap=$('docwrap'), createBtn=$('createBtn'),
+      fCode=$('fCode'), pCode=$('pCode'), qTitle=$('qTitle'), chip1=$('chip1'), chip2=$('chip2'),
+      fOpt1=$('fOpt1'), pOpt1=$('pOpt1'), fOpt2=$('fOpt2'), pOpt2=$('pOpt2'),
+      fNew=$('fNew'), pNew=$('pNew'), addOptBtn=$('addOptBtn'), opt3row=$('opt3row'), pOpt3=$('pOpt3'), chip3=$('chip3'),
+      deleteBtn=$('deleteBtn');
+const HOT={x:4,y:3};
+const PREV_OFF={x:-18,y:-28};   // full-row preview: drag handle near cursor, row centered vertically
+
+// measure relative to .body2 — the positioning context that the cursor/preview live in
+function appRect(el){ const a=stage.getBoundingClientRect(), s=a.width/1280, r=el.getBoundingClientRect();
+  const x=(r.left-a.left)/s, y=(r.top-a.top)/s, w=r.width/s, h=r.height/s;
+  return {x,y,w,h,cx:x+w/2,cy:y+h/2}; }
+
+function setMode(m){ cursor.className='cursor'+(m==='arrow'?'':' '+m); }
+function placeCursor(p){ cursor.style.transition='none'; cursor.style.transform=`translate(${p.x-HOT.x}px,${p.y-HOT.y}px)`; void cursor.offsetWidth; cursor.style.transition=''; }
+function moveCursor(p,dur=640){ cursor.style.transitionDuration=(dur/1000)+'s'; cursor.style.transform=`translate(${p.x-HOT.x}px,${p.y-HOT.y}px)`; return sleep(dur); }
+function movePreview(p,dur=640){ preview.style.transition=`transform ${dur/1000}s var(--e-io)`;
+  preview.style.transform=`translate(${p.x+PREV_OFF.x}px,${p.y+PREV_OFF.y}px) scale(1.02)`; }
+function liftPreview(p){ preview.style.transition='none';
+  preview.style.transform=`translate(${p.x+PREV_OFF.x}px,${p.y+PREV_OFF.y}px) scale(.9)`;
+  preview.classList.add('show'); void preview.offsetWidth;
+  preview.style.transition='transform .3s var(--e-spring),opacity .2s var(--e-out),box-shadow .3s var(--e-out)';
+  preview.style.transform=`translate(${p.x+PREV_OFF.x}px,${p.y+PREV_OFF.y}px) scale(1.02)`; }
+function drag(p,dur=640){ moveCursor(p,dur); movePreview(p,dur); return sleep(dur); }
+async function click(el){ cursor.classList.add('press'); if(el) el.classList.add('press'); await sleep(150); cursor.classList.remove('press'); if(el) el.classList.remove('press'); await sleep(150); }
+const rnd=(a,b)=>a+Math.random()*(b-a);
+async function typeField(fieldEl, valEl, mirrorEl, text, clearFirst){
+  fieldEl.classList.add('focusf');
+  if(clearFirst){ valEl.classList.remove('isph'); valEl.textContent=''; }  // placeholder clears the instant the field is focused
+  fieldEl.classList.add('typing');                                         // caret now blinks in the empty field
+  await sleep(240);
+  let s='';
+  for(const ch of text){ s+=ch; valEl.textContent=s; if(mirrorEl) mirrorEl.textContent=s;
+    await sleep(ch===' '?rnd(38,80):rnd(46,108)); }
+  await sleep(360); fieldEl.classList.remove('typing');
+  await sleep(220); fieldEl.classList.remove('focusf');
+}
+async function editField(fieldEl, valEl, mirrorEl, text, clearFirst){
+  const r=appRect(fieldEl);
+  await moveCursor({x:r.cx, y:r.cy}, 640);
+  await click();
+  await typeField(fieldEl, valEl, mirrorEl, text, clearFirst);
+}
+async function addOption(text){
+  // type into the "New option..." field
+  const r=appRect(fNew);
+  await moveCursor({x:r.cx, y:r.cy}, 640);
+  await click();
+  await typeField(fNew, pNew, null, text, true);
+  // click the plus icon -> commit the option above the field
+  const pr=appRect(addOptBtn);
+  await moveCursor({x:pr.cx, y:pr.cy}, 480);
+  await click(addOptBtn);
+  pOpt3.textContent=text; opt3row.style.display=''; await raf2(); opt3row.classList.add('in');
+  chip3.textContent=text; chip3.style.display=''; await raf2(); chip3.classList.add('in');
+  pNew.textContent='New option...'; pNew.classList.add('isph');
+}
+function cameraTo(p,z,dur=900){
+  let tx=640-p.x*z, ty=400-p.y*z;
+  tx=Math.min(0, Math.max(1280*(1-z), tx));   // keep the app's left/right edges outside the frame
+  ty=Math.min(0, Math.max(800*(1-z), ty));    // keep the app's top/bottom edges outside the frame
+  camera.style.transitionDuration=(dur/1000)+'s';
+  camera.style.transform=`translate(${tx}px,${ty}px) scale(${z})`; return sleep(dur); }
+function cameraReset(dur=900){ camera.style.transitionDuration=(dur/1000)+'s'; camera.style.transform='none'; return sleep(dur); }
+
+function restoreDefaults(){
+  qTitle.textContent='Untitled question'; chip1.textContent='Option 1'; chip2.textContent='Option 2';
+  pCode.textContent='Untitled question'; pCode.classList.add('isph');
+  pOpt1.textContent='Option 1'; pOpt2.textContent='Option 2'; pOpt1.classList.add('isph'); pOpt2.classList.add('isph');
+  [fCode,fOpt1,fOpt2,fNew].forEach(f=>f.classList.remove('focusf','typing'));
+  pNew.textContent='New option...'; pNew.classList.add('isph');
+  opt3row.classList.remove('in'); opt3row.style.display='none';
+  chip3.classList.remove('in'); chip3.style.display='none';
+  droppedQ.classList.remove('in'); droppedQ.style.display='none';
+}
+function reset(){
+  setMode('arrow'); chipCard.classList.remove('hover','lifting'); preview.classList.remove('show');
+  dropzone.classList.remove('dragging','over'); dropzone.style.display=''; createBtn.classList.remove('hover','press');
+  deleteBtn.classList.remove('hover','press');
+  qdes.classList.remove('sel'); props.classList.remove('filled');
+  emptyCreate.classList.remove('out'); emptyCreate.style.display='';
+  docwrap.classList.remove('in'); docwrap.style.display='none';
+  restoreDefaults();
+}
+
+async function run(){
+  await (document.fonts ? document.fonts.ready : Promise.resolve());
+  await sleep(120); fit();                 // let layout settle before measuring
+  reset();
+  let c0=appRect(createBtn);
+  placeCursor({x:c0.cx+110, y:c0.cy+120});
+  if(reduce){
+    emptyCreate.style.display='none'; docwrap.style.display=''; docwrap.classList.add('in');
+    dropzone.style.display='none'; droppedQ.style.display=''; droppedQ.classList.add('in');
+    qdes.classList.add('sel'); props.classList.add('filled'); cursor.style.display='none'; return; }
+  while(true){
+    await sleep(700);
+    // 1 — zoom in toward the empty state, then click Create block
+    cameraTo({x:640, y:300}, 1.2, 1000);
+    const create=appRect(createBtn);
+    await moveCursor({x:create.cx, y:create.cy}, 780);
+    createBtn.classList.add('hover'); await sleep(300);
+    await click(createBtn);
+    createBtn.classList.remove('hover');
+    emptyCreate.classList.add('out');
+    await sleep(380); emptyCreate.style.display='none';
+    docwrap.style.display=''; await raf2(); docwrap.classList.add('in');   // empty block (grey dashed, idle text)
+    // 2 — zoom back out to wide so the sidebar and the drop zone are both in view
+    cameraReset(1000);
+    await sleep(950);
+    // 3 — move onto the Chips chip and pick it up in one continuous motion (no pause)
+    const dropRect=appRect(dropzone); preview.style.width=(dropRect.w-12)+'px';
+    const chip=appRect(chipCard);
+    const dropTarget={x:dropRect.x+24, y:dropRect.cy};
+    await moveCursor({x:chip.cx, y:chip.cy}, 720);
+    chipCard.classList.add('hover'); setMode('grab');
+    await raf2();                                   // grab + lift, then immediately glide to the drop zone
+    setMode('grabbing'); chipCard.classList.add('lifting');
+    liftPreview({x:chip.cx, y:chip.cy});
+    dropzone.classList.add('dragging');
+    await drag(dropTarget, 1180);
+    await sleep(560);
+    // 4 — drop + auto-select
+    preview.classList.remove('show');
+    chipCard.classList.remove('hover','lifting'); setMode('arrow');
+    dropzone.style.display='none'; dropzone.classList.remove('dragging');
+    droppedQ.style.display=''; await raf2();
+    droppedQ.classList.add('in');
+    await sleep(300);
+    qdes.classList.add('sel');               // auto-selected
+    props.classList.add('filled');           // settings appear in the (already visible) panel
+    // 5 — zoom in to frame the block + settings panel together
+    await cameraTo({x:830, y:336}, 1.18, 1000);
+    await sleep(450);
+    // 6 — enter details in the right panel; the block updates live
+    await editField(fCode, pCode, qTitle, "Smoking", true);        // question name -> block title
+    await sleep(260);
+    await editField(fOpt1, pOpt1, chip1, "Smoker", true);          // option 1 -> first chip
+    await sleep(220);
+    await editField(fOpt2, pOpt2, chip2, "Ex-smoker", true);       // option 2 -> second chip
+    await sleep(240);
+    await addOption("Non-smoker");                                 // new option -> + -> third chip
+    await sleep(900);
+    // 7 — to loop: click the block's delete icon to remove it
+    const del=appRect(deleteBtn);
+    await moveCursor({x:del.cx, y:del.cy}, 720);
+    deleteBtn.classList.add('hover'); await sleep(280);
+    await click(deleteBtn);
+    deleteBtn.classList.remove('hover');
+    // block (selection/blue border intact) + panel content fade out together; zoom back out to wide
+    props.classList.remove('filled');
+    docwrap.classList.remove('in');
+    cameraReset(1000);
+    await sleep(640);
+    docwrap.style.display='none';
+    qdes.classList.remove('sel');                                     // clear selection only while hidden
+    restoreDefaults(); dropzone.style.display='';                     // reset internals while hidden
+    // 8 — bring the empty state back in
+    emptyCreate.style.display=''; await raf2(); emptyCreate.classList.remove('out');
+    await sleep(750);
+  }
+}
+run();
+</script>
+</body></html>

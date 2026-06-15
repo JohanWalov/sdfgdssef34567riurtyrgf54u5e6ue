@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Form Builder — reorder</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--ink:#202020;--icon:#374151;--muted:#6b7280;--line:#e5e7eb;--field:#d4d6e1;
+  --blue:#3e5bfd;--surface:#fefefe;--canvas:#fcfdff;--item:#f6f7fe;--row:#f7f8fd;--child:#f9fafe;
+  --e-out:cubic-bezier(.16,1,.3,1);--e-io:cubic-bezier(.76,0,.24,1);--e-spring:cubic-bezier(.34,1.5,.6,1)}
+body{font-family:'Inter',system-ui,sans-serif;-webkit-font-smoothing:antialiased;margin:0;padding:0;overflow:hidden;background:transparent}
+.frame{position:fixed;inset:0;width:100%;height:100%;border-radius:0;overflow:hidden;background:var(--canvas)}
+.scaler{position:absolute;top:0;left:0;width:1280px;height:812px;transform-origin:top left}
+.camera{position:absolute;inset:0;transform-origin:0 0;transition:transform .9s var(--e-out)}
+.app{position:relative;width:1280px;height:812px;background:var(--canvas);display:flex;flex-direction:column;color:var(--icon);font-size:14px}
+
+/* header */
+.hdr{height:58px;background:var(--surface);border-bottom:1px solid var(--line);display:flex;align-items:center;
+  justify-content:space-between;padding:8px 20px 8px 8px;flex:none}
+.iconbtn{width:32px;height:32px;border-radius:6px;display:flex;align-items:center;justify-content:center}
+.hleft{display:flex;align-items:center;gap:8px;min-width:0}
+.center-wrap{display:flex;gap:12px;align-items:center;padding:6px 8px}
+.title{font-weight:700;font-size:15px;line-height:20px;color:var(--ink);white-space:nowrap}
+.draftchip{background:#eceef2;height:24px;display:flex;align-items:center;padding:0 12px;border-radius:999px;font-size:12px;font-weight:500;line-height:20px;color:var(--ink)}
+.autosave{display:flex;gap:8px;align-items:center;height:32px;padding:8px 4px;border-radius:6px;font-size:12px;font-weight:500;color:var(--ink)}
+.hgroup{display:flex;gap:8px;align-items:center}
+.btn{height:40px;display:flex;align-items:center;justify-content:center;padding:0 16px;border-radius:8px;font-size:14px;font-weight:600;white-space:nowrap}
+.btn.ghost{background:#ebf5fd;color:var(--blue)}
+.btn.primary{background:var(--blue);color:var(--surface)}
+
+/* body */
+.body2{flex:1;position:relative;min-height:0}
+.libside{position:absolute;left:0;top:0;bottom:0;width:264px;background:var(--surface);border-right:1px solid var(--line);
+  display:flex;flex-direction:column;gap:22px;padding:22px 20px;overflow:hidden}
+.lib-sec{display:flex;flex-direction:column;gap:10px}
+.lib-h{font-weight:700;font-size:15px;line-height:20px;color:var(--ink)}
+.lib-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.libcard{background:var(--item);border-radius:14px;padding:14px 12px 15px;display:flex;flex-direction:column;gap:13px;align-items:flex-start;min-height:76px}
+.libcard .ico{width:22px;height:22px}
+.libcard .lbl{font-size:14px;font-weight:500;line-height:20px;color:var(--ink);white-space:nowrap}
+
+/* canvas */
+.canvas{position:absolute;left:264px;top:0;bottom:0;right:264px;background:var(--canvas);display:flex;flex-direction:column;
+  align-items:center;padding:5px 24px;overflow:hidden}
+.docwrap{width:100%;max-width:712px;display:flex;flex-direction:column;gap:4px;align-items:center}
+.docframe{background:#fff;border:1px solid #eceef2;border-radius:18px;padding:12px;display:flex;align-items:center;width:100%;
+  box-shadow:0 1px 2px rgba(22,32,43,.04)}
+.block{background:transparent;border-radius:8px;flex:1;min-width:0;padding:4px 8px 6px;display:flex;flex-direction:column;gap:6px}
+.blockhead{display:flex;gap:10px;align-items:center;padding:4px 4px 0}
+.acc{display:flex;gap:8px;align-items:center}
+.blocktitle{flex:1;display:flex;align-items:center;font-weight:700;font-size:17px;line-height:24px;color:var(--ink)}
+.morebtn{width:30px;height:30px;border-radius:6px;display:flex;align-items:center;justify-content:center;flex:none}
+.bdivider{background:#eceef0;height:1px;border-radius:999px;margin:0 2px}
+
+/* rows */
+.qlist{display:flex;flex-direction:column;gap:6px}
+.children{display:flex;flex-direction:column;gap:6px;margin-top:6px;padding-left:34px;position:relative}
+.children::before{content:"";position:absolute;left:13px;top:4px;bottom:4px;width:1.5px;background:#dfe2ea;border-radius:2px}
+
+.qrow{position:relative;background:var(--row);border-radius:12px;display:flex;align-items:center;gap:12px;
+  padding:9px 16px;min-height:46px;will-change:transform}
+.qrow.child{background:var(--child)}
+.grouphead{background:var(--item)}
+.chev{display:flex;align-items:center;justify-content:center;flex:none}
+.grip{display:flex;align-items:center;justify-content:center;flex:none;cursor:grab}
+.qtitle{display:flex;align-items:center;gap:6px;font-weight:600;font-size:15px;line-height:20px;color:var(--ink);white-space:nowrap;flex:none;min-width:158px}
+.grouphead .qtitle{font-weight:700;min-width:148px}
+.req{color:#ef4444;font-weight:600;transition:opacity .18s ease}
+.req.off{opacity:0}
+
+/* drop-preview indicator line */
+.dropline{position:absolute;left:34px;right:0;height:2.5px;background:var(--blue);border-radius:2px;
+  opacity:0;transform:scaleX(.55);transform-origin:left center;
+  transition:opacity .2s var(--e-out),transform .36s var(--e-spring);pointer-events:none;z-index:30}
+.dropline.show{opacity:1;transform:scaleX(1)}
+.dropline::before{content:"";position:absolute;left:-3px;top:50%;width:8px;height:8px;border-radius:50%;
+  background:var(--blue);transform:translate(0,-50%) scale(.3);transition:transform .34s var(--e-spring)}
+.dropline.show::before{transform:translate(0,-50%) scale(1)}
+
+/* animatable toggle */
+.tgl{position:relative;width:44px;height:24px;border-radius:999px;flex:none;box-sizing:border-box;
+  transition:background .2s ease,box-shadow .2s ease}
+.tgl.on{background:#3E5BFD}
+.tgl.off{background:#FEFEFE;box-shadow:inset 0 0 0 1px #C8C8DE}
+.tgl .knob{position:absolute;top:2px;width:20px;height:20px;border-radius:50%;
+  transition:transform .3s var(--e-spring),background .22s ease}
+.tgl.on .knob{background:#FEFEFE;transform:translateX(22px)}
+.tgl.off .knob{background:#9CA3AF;transform:translateX(2px)}
+.chipsgrp{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.chip-pill{background:#e7eaff;height:31px;display:flex;align-items:center;padding:0 14px;border-radius:999px;font-size:13.5px;font-weight:500;color:#2c2c3a;white-space:nowrap}
+.rowmore{margin-left:auto;display:flex;align-items:center;justify-content:center;flex:none}
+.spacer{flex:1}
+
+/* fields inside rows */
+.unitfield{display:flex;align-items:stretch;height:40px;border:1px solid var(--field);border-radius:9px;overflow:hidden;background:#fff}
+.unitfield .num{display:flex;align-items:center;width:104px;padding:0 14px;color:#9aa1ad;font-size:15px}
+.unitfield .udiv{width:1px;background:var(--field)}
+.unitfield .unit{display:flex;align-items:center;padding:0 16px;color:#3a3f4a;font-size:15px;white-space:nowrap}
+.datefield{display:flex;align-items:center;gap:10px;height:40px;padding:0 14px;border:1px solid var(--field);border-radius:9px;background:#fff;width:194px}
+.datefield .dph{flex:1;color:#9aa1ad;font-size:15px}
+
+/* selected row */
+.qrow.selrow{background:var(--child);border:2px solid var(--blue);padding:7px 14px}
+.qrow.selrow .qtitle{min-width:154px}
+/* fields in these two rows share one left start line and one height */
+.qrow.fld .qtitle{width:202px;min-width:202px}
+.qrow.fld .unitfield,.qrow.fld .datefield{height:40px}
+
+/* every question the same height — except the taller two-row Type surgery */
+.qrow:not(.tsurg){height:58px}
+/* Type surgery: chevron, handle and title aligned to the top (level with the first chip row) */
+.qrow.tsurg{align-items:flex-start}
+.qrow.tsurg .chev,.qrow.tsurg .grip,.qrow.tsurg .qtitle{min-height:31px}
+
+/* lifted (dragging) */
+.qrow.lift{z-index:40;box-shadow:0 18px 40px rgba(22,32,43,.20),0 4px 12px rgba(22,32,43,.10)}
+
+.addq{background:#ebf5fd;height:42px;display:inline-flex;align-items:center;justify-content:center;padding:0 18px;border-radius:9px;color:var(--blue);font-weight:600;font-size:15px;align-self:flex-start;margin:2px 0 0 4px}
+.addblock{height:40px;display:flex;align-items:center;justify-content:center;padding:0 16px;color:var(--blue);font-weight:600;font-size:16px}
+
+/* properties panel */
+.props{position:absolute;right:0;top:0;bottom:0;width:264px;background:var(--surface);border-left:1px solid var(--line);
+  display:flex;flex-direction:column;gap:0;padding:22px 0;overflow:hidden}
+.psec{display:flex;flex-direction:column;gap:14px;padding:0 20px}
+.psec .h{font-weight:700;font-size:15px;line-height:20px;color:var(--ink)}
+.combo{display:flex;flex-direction:column;gap:6px}
+.combo .lbl{font-weight:500;font-size:14.5px;line-height:20px;color:var(--ink)}
+.field{background:var(--surface);height:42px;border:1px solid var(--field);border-radius:10px;display:flex;align-items:center;gap:10px;padding:0 12px}
+.field .val{flex:1;color:#202020;font-size:15px;line-height:20px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.field .val.isph{color:var(--muted)}
+.field .closex{display:flex;align-items:center;justify-content:center}
+.vdiv{width:1px;height:100%;background:var(--field)}
+.field .chev2{display:flex;align-items:center;justify-content:center;padding-left:2px}
+.switch{display:flex;gap:14px;align-items:center}
+.swlabel{font-size:15px;font-weight:500;color:var(--ink);line-height:20px}
+.pdivider{background:var(--line);height:1px;border-radius:999px;margin:18px 0}
+
+/* cursor */
+.cursor{position:absolute;left:0;top:0;z-index:90;pointer-events:none;transition:transform .62s var(--e-io);
+  filter:drop-shadow(0 2px 5px rgba(16,24,40,.25));will-change:transform}
+.cursor .lyr{position:absolute;left:0;top:0}
+.cursor .open,.cursor .grabh{left:-13px;top:-13px}
+.cursor .open,.cursor .grabh{display:none}
+.cursor.grab .arrow{display:none} .cursor.grab .open{display:block}
+.cursor.grabbing .arrow{display:none} .cursor.grabbing .grabh{display:block}
+.cursor.press{transform-origin:4px 3px}
+</style></head>
+<body>
+<div class="frame"><div class="scaler" id="scaler"><div class="camera" id="camera">
+ <div class="app">
+
+  <!-- header -->
+  <div class="hdr">
+    <div class="hleft">
+      <div class="iconbtn"><svg width="18" height="18" viewBox="0 0 12.1667 9.5" fill="none" preserveAspectRatio="xMidYMid meet" style="display:block"><path d="M0.75 4.75H11.4167M0.75 0.75H11.4167M0.75 8.75H11.4167" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" vector-effect="non-scaling-stroke"/></svg></div>
+      <div class="center-wrap">
+        <span class="title">Lung surgery (case history)</span>
+        <span class="draftchip">Draft</span>
+        <span class="autosave"><svg width="16" height="16" viewBox="0 0 15.5 10.4999" fill="none" preserveAspectRatio="xMidYMid meet" style="display:block"><path d="M4.0099 9.74715C2.2095 9.74715 0.75 8.3581 0.75 6.64446C0.75 4.93151 2.2095 3.54246 4.0099 3.54246C4.285 2.32298 5.2657 1.32774 6.5824 0.931165C7.8984 0.535283 9.3516 0.797589 10.3932 1.62327C11.4348 2.44687 11.9066 3.70441 11.6322 4.92389H12.3252C13.6643 4.92389 14.75 6.00357 14.75 7.33656C14.75 8.67024 13.6643 9.74991 12.3245 9.74991H4.0099M5.20455 6.14991L6.47727 7.43563L9.02273 4.8642" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" vector-effect="non-scaling-stroke"/></svg>Changes saved</span>
+      </div>
+    </div>
+    <div class="hgroup">
+      <div class="iconbtn"><svg width="17" height="17" viewBox="0 0 13.5234 14.8333" fill="none" preserveAspectRatio="xMidYMid meet" style="display:block"><path d="M6.90839 0.75H6.61506C6.26143 0.75 5.92229 0.890476 5.67225 1.14052C5.4222 1.39057 5.28172 1.72971 5.28172 2.08333V2.20333C5.28148 2.43715 5.21976 2.66679 5.10275 2.86923C4.98574 3.07166 4.81755 3.23976 4.61506 3.35667L4.32839 3.52333C4.1257 3.64036 3.89577 3.70197 3.66172 3.70197C3.42767 3.70197 3.19775 3.64036 2.99506 3.52333L2.89506 3.47C2.5891 3.29351 2.22561 3.24563 1.88439 3.33687C1.54317 3.42811 1.25209 3.65102 1.07506 3.95667L0.928389 4.21C0.751897 4.51596 0.704018 4.87944 0.795261 5.22067C0.886503 5.56189 1.10941 5.85297 1.41506 6.03L1.51506 6.09667C1.71657 6.21301 1.88413 6.38006 2.00109 6.58122C2.11804 6.78238 2.18032 7.01065 2.18172 7.24333V7.58333C2.18265 7.81828 2.12149 8.0493 2.00442 8.25301C1.88735 8.45671 1.71853 8.62586 1.51506 8.74333L1.41506 8.80333C1.10941 8.98037 0.886503 9.27144 0.795261 9.61267C0.704018 9.95389 0.751897 10.3174 0.928389 10.6233L1.07506 10.8767C1.25209 11.1823 1.54317 11.4052 1.88439 11.4965C2.22561 11.5877 2.5891 11.5398 2.89506 11.3633L2.99506 11.31C3.19775 11.193 3.42767 11.1314 3.66172 11.1314C3.89577 11.1314 4.1257 11.193 4.32839 11.31L4.61506 11.4767C4.81755 11.5936 4.98574 11.7617 5.10275 11.9641C5.21976 12.1665 5.28148 12.3962 5.28172 12.63V12.75C5.28172 13.1036 5.4222 13.4428 5.67225 13.6928C5.92229 13.9429 6.26143 14.0833 6.61506 14.0833H6.90839C7.26201 14.0833 7.60115 13.9429 7.8512 13.6928C8.10125 13.4428 8.24172 13.1036 8.24172 12.75V12.63C8.24196 12.3962 8.30368 12.1665 8.4207 11.9641C8.53771 11.7617 8.7059 11.5936 8.90839 11.4767L9.19506 11.31C9.39775 11.193 9.62767 11.1314 9.86172 11.1314C10.0958 11.1314 10.3257 11.193 10.5284 11.31L10.6284 11.3633C10.9343 11.5398 11.2978 11.5877 11.6391 11.4965C11.9803 11.4052 12.2714 11.1823 12.4484 10.8767L12.5951 10.6167C12.7715 10.3107 12.8194 9.94722 12.7282 9.606C12.6369 9.26478 12.414 8.9737 12.1084 8.79667L12.0084 8.74333C11.8049 8.62586 11.6361 8.45671 11.519 8.25301C11.402 8.0493 11.3408 7.81828 11.3417 7.58333V7.25C11.3408 7.01505 11.402 6.78403 11.519 6.58033C11.6361 6.37662 11.8049 6.20747 12.0084 6.09L12.1084 6.03C12.414 5.85297 12.6369 5.56189 12.7282 5.22067C12.8194 4.87944 12.7715 4.51596 12.5951 4.21L12.4484 3.95667C12.2714 3.65102 11.9803 3.42811 11.6391 3.33687C11.2978 3.24563 10.9343 3.29351 10.6284 3.47L10.5284 3.52333C10.3257 3.64036 10.0958 3.70197 9.86172 3.70197C9.62767 3.70197 9.39775 3.64036 9.19506 3.52333L8.90839 3.35667C8.7059 3.23976 8.53771 3.07166 8.4207 2.86923C8.30368 2.66679 8.24196 2.43715 8.24172 2.20333V2.08333C8.24172 1.72971 8.10125 1.39057 7.8512 1.14052C7.60115 0.890476 7.26201 0.75 6.90839 0.75Z" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" vector-effect="non-scaling-stroke"/><path d="M6.76172 9.41667C7.86629 9.41667 8.76172 8.52124 8.76172 7.41667C8.76172 6.3121 7.86629 5.41667 6.76172 5.41667C5.65715 5.41667 4.76172 6.3121 4.76172 7.41667C4.76172 8.52124 5.65715 9.41667 6.76172 9.41667Z" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" vector-effect="non-scaling-stroke"/></svg></div>
+      <div class="btn ghost">Preview</div>
+      <div class="btn primary">Publish</div>
+    </div>
+  </div>
+
+  <!-- body -->
+  <div class="body2">
+
+    <!-- component library -->
+    <div class="libside">
+      <div class="lib-sec"><div class="lib-h">Questions</div>
+        <div class="lib-grid">
+          <!-- Text field -->
+          <div class="libcard"><div class="ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" preserveAspectRatio="xMidYMid meet" style="display:block"><path d="M1 5.5H19V18.5H1M1 12.5H13.5" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/></svg></div><div class="lbl">Text field</div></div>
+          <!-- Decimal field -->
+          <div class="libcard"><div class="ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" preserveAspectRatio="xMidYMid meet" style="display:block"><path d="M15.5 17V7H12M12 17H19M4.5 7C6.433 7 8 8.49238 8 10.3333V13.6667C8 15.5076 6.433 17 4.5 17C2.567 17 1 15.5076 1 13.6667V10.3333C1 8.49238 2.567 7 4.5 7Z" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/></svg></div><div class="lbl">Decimal field</div></div>
+          <!-- Checkbox -->
+          <div class="libcard"><div class="ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" preserveAspectRatio="xMidYMid meet" style="display:block"><path d="M2 5.5L3.625 7L6.33333 4.5M2 11.5L3.625 13L6.33333 10.5M2 17.5L3.625 19L6.33333 16.5M10.125 6H19.875M10.125 12H19.875M10.125 18H19.875" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/></svg></div><div class="lbl">Checkbox</div></div>
+          <!-- Radio button -->
+          <div class="libcard"><div class="ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" preserveAspectRatio="xMidYMid meet" style="display:block"><path d="M8.23047 6H17.2305M8.23047 12H17.2305M8.23047 18H17.2305M4.23047 6C4.23047 6.82843 3.5589 7.5 2.73047 7.5C1.90204 7.5 1.23047 6.82843 1.23047 6C1.23047 5.17157 1.90204 4.5 2.73047 4.5C3.5589 4.5 4.23047 5.17157 4.23047 6ZM4.23047 12C4.23047 12.8284 3.5589 13.5 2.73047 13.5C1.90204 13.5 1.23047 12.8284 1.23047 12C1.23047 11.1716 1.90204 10.5 2.73047 10.5C3.5589 10.5 4.23047 11.1716 4.23047 12ZM4.23047 18C4.23047 18.8284 3.5589 19.5 2.73047 19.5C1.90204 19.5 1.23047 18.8284 1.23047 18C1.23047 17.1716 1.90204 16.5 2.73047 16.5C3.5589 16.5 4.23047 17.1716 4.23047 18Z" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/></svg></div><div class="lbl">Radio button</div></div>
+          <!-- Dropdown -->
+          <div class="libcard"><div class="ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" preserveAspectRatio="xMidYMid meet" style="display:block"><path d="M1 5.5H19V18.5H1M8.25 10.5L11.25 14L14.25 10.5" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/></svg></div><div class="lbl">Dropdown</div></div>
+          <!-- Combobox -->
+          <div class="libcard"><div class="ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" preserveAspectRatio="xMidYMid meet" style="display:block"><path d="M1 5.5H19V18.5H1M14 15L12.5667 13.5667M13.3333 11.6667C13.3333 13.1394 12.1394 14.3333 10.6667 14.3333C9.19391 14.3333 8 13.1394 8 11.6667C8 10.1939 9.19391 9 10.6667 9C12.1394 9 13.3333 10.1939 13.3333 11.6667Z" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/></svg></div><div class="lbl">Combobox</div></div>
+          <!-- Chips -->
+          <div class="libcard"><div class="ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" preserveAspectRatio="xMidYMid meet" style="display:block"><path d="M7.1543 12H13.1543M5.6543 16.5H14.6543C17.1396 16.5 19.1543 14.4853 19.1543 12C19.1543 9.51472 17.1396 7.5 14.6543 7.5H5.6543C3.16902 7.5 1.1543 9.51472 1.1543 12C1.1543 14.4853 3.16902 16.5 5.6543 16.5Z" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/></svg></div><div class="lbl">Chips</div></div>
+          <!-- Date field -->
+          <div class="libcard"><div class="ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" preserveAspectRatio="xMidYMid meet" style="display:block"><path d="M5.77732 3.91211V7.14727M13.0679 3.91211V7.14727M1.8457 10.3824H16.9995M3.41835 5.52969H15.4269C16.2954 5.52969 16.9995 6.2539 16.9995 7.14727V18.4703C16.9995 19.3637 16.2954 20.0879 15.4269 20.0879H3.41835C2.5498 20.0879 1.8457 19.3637 1.8457 18.4703V7.14727C1.8457 6.2539 2.5498 5.52969 3.41835 5.52969Z" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/></svg></div><div class="lbl">Date field</div></div>
+        </div>
+      </div>
+      <div class="lib-sec"><div class="lib-h">Blocks</div>
+        <div class="lib-grid">
+          <!-- Free text -->
+          <div class="libcard"><div class="ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" preserveAspectRatio="xMidYMid meet" style="display:block"><path d="M3 6H21M3 12H17M3 18H13" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/></svg></div><div class="lbl">Free text</div></div>
+          <!-- Tree -->
+          <div class="libcard"><div class="ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" preserveAspectRatio="xMidYMid meet" style="display:block"><path d="M21 6H9M21 12H12M21 18H12M3 4V8.5C3 9.60457 3.89543 10.5 5 10.5H9M3 12.5V15.5C3 16.6046 3.89543 17.5 5 17.5H9" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/></svg></div><div class="lbl">Tree</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- canvas -->
+    <div class="canvas" id="canvas">
+      <div class="docwrap" id="docwrap">
+        <div class="docframe"><div class="block">
+
+          <div class="blockhead">
+            <div class="acc">
+              <svg width="14" height="14" viewBox="0 0 9.5 5.5" fill="none" preserveAspectRatio="xMidYMid meet" style="display:block"><path d="M8.75 4.75L4.75 0.75L0.75 4.75" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" vector-effect="non-scaling-stroke"/></svg>
+              <svg width="14" height="14" viewBox="0 0 6.83333 12.1667" fill="none" preserveAspectRatio="xMidYMid meet" style="display:block"><path d="M1.41667 6.75C1.78486 6.75 2.08333 6.45152 2.08333 6.08333C2.08333 5.71514 1.78486 5.41667 1.41667 5.41667C1.04848 5.41667 0.75 5.71514 0.75 6.08333C0.75 6.45152 1.04848 6.75 1.41667 6.75Z" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" vector-effect="non-scaling-stroke"/><path d="M1.41667 2.08333C1.78486 2.08333 2.08333 1.78486 2.08333 1.41667C2.08333 1.04848 1.78486 0.75 1.41667 0.75C1.04848 0.75 0.75 1.04848 0.75 1.41667C0.75 1.78486 1.04848 2.08333 1.41667 2.08333Z" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" vector-effect="non-scaling-stroke"/><path d="M1.41667 11.4167C1.78486 11.4167 2.08333 11.1182 2.08333 10.75C2.08333 10.3818 1.78486 10.0833 1.41667 10.0833C1.04848 10.0833 0.75 10.3818 0.75 10.75C0.75 11.1182 1.04848 11.4167 1.41667 11.4167Z" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" vector-effect="non-scaling-stroke"/><path d="M5.41667 6.75C5.78486 6.75 6.08333 6.45152 6.08333 6.08333C6.08333 5.71514 5.78486 5.41667 5.41667 5.41667C5.04848 5.41667 4.75 5.71514 4.75 6.08333C4.75 6.45152 5.04848 6.75 5.41667 6.75Z" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" vector-effect="non-scaling-stroke"/><path d="M5.41667 2.08333C5.78486 2.08333 6.08333 1.78486 6.08333 1.41667C6.08333 1.04848 5.78486 0.75 5.41667 0.75C5.04848 0.75 4.75 1.04848 4.75 1.41667C4.75 1.78486 5.04848 2.08333 5.41667 2.08333Z" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" vector-effect="non-scaling-stroke"/><path d="M5.41667 11.4167C5.78486 11.4167 6.08333 11.1182 6.08333 10.75C6.08333 10.3818 5.78486 10.0833 5.41667 10.0833C5.04848 10.0833 4.75 10.3818 4.75 10.75C4.75 11.1182 5.04848 11.4167 5.41667 11.4167Z" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" vector-effect="non-scaling-stroke"/></svg>
+            </div>
+            <div class="blocktitle">Personal information</div>
+            <div class="morebtn"><svg width="17" height="17" viewBox="0 0 13.5 14.8333" fill="none" preserveAspectRatio="xMidYMid meet" style="display:block"><path d="M0.75 3.41667H12.75M11.4167 3.41667V12.75C11.4167 13.4167 10.75 14.0833 10.0833 14.0833H3.41667C2.75 14.0833 2.08333 13.4167 2.08333 12.75V3.41667M4.08333 3.41667V2.08333C4.08333 1.41667 4.75 0.75 5.41667 0.75H8.08333C8.75 0.75 9.41667 1.41667 9.41667 2.08333V3.41667" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" vector-effect="non-scaling-stroke"/></svg></div>
+          </div>
+          <div class="bdivider"></div>
+
+          <div class="qlist">
+
+            <!-- ===== SMOKING group ===== -->
+            <div class="qrow grouphead">
+              <span class="chev"><svg width="14" height="14" viewBox="0 0 9.5 5.5" fill="none" style="display:block"><path d="M8.75 4.75L4.75 0.75L0.75 4.75" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/></svg></span>
+              <span class="grip"><svg width="16" height="16" viewBox="0 0 6.83333 12.1667" fill="none" preserveAspectRatio="xMidYMid meet" style="display:block"><path d="M1.41667 6.75C1.78486 6.75 2.08333 6.45152 2.08333 6.08333C2.08333 5.71514 1.78486 5.41667 1.41667 5.41667C1.04848 5.41667 0.75 5.71514 0.75 6.08333C0.75 6.45152 1.04848 6.75 1.41667 6.75Z" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" vector-effect="non-scaling-stroke"/><path d="M1.41667 2.08333C1.78486 2.08333 2.08333 1.78486 2.08333 1.41667C2.08333 1.04848 1.78486 0.75 1.41667 0.75C1.04848 0.75 0.75 1.04848 0.75 1.41667C0.75 1.78486 1.04848 2.08333 1.41667 2.08333Z" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" vector-effect="non-scaling-stroke"/><path d="M1.41667 11.4167C1.78486 11.4167 2.08333 11.1182 2.08333 10.75C2.08333 10.3818 1.78486 10.0833 1.41667 10.0833C1.04848 10.0833 0.75 10.3818 0.75 10.75C0.75 11.1182 1.04848 11.4167 1.41667 11.4167Z" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" vector-effect="non-scaling-stroke"/><path d="M5.41667 6.75C5.78486 6.75 6.08333 6.45152 6.08333 6.08333C6.08333 5.71514 5.78486 5.41667 5.41667 5.41667C5.04848 5.41667 4.75 5.71514 4.75 6.08333C4.75 6.45152 5.04848 6.75 5.41667 6.75Z" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" vector-effect="non-scaling-stroke"/><path d="M5.41667 2.08333C5.78486 2.08333 6.08333 1.78486 6.08333 1.41667C6.08333 1.04848 5.78486 0.75 5.41667 0.75C5.04848 0.75 4.75 1.04848 4.75 1.41667C4.75 1.78486 5.04848 2.08333 5.41667 2.08333Z" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" vector-effect="non-scaling-stroke"/><path d="M5.41667 11.4167C5.78486 11.4167 6.08333 11.1182 6.08333 10.75C6.08333 10.3818 5.78486 10.0833 5.41667 10.0833C5.04848 10.0833 4.75 10.3818 4.75 10.75C4.75 11.1182 5.04848 11.4167 5.41667 11.4167Z" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" vector-effect="non-scaling-stroke"/></svg></span>
+              <span class="qtitle">Smoking</span>
+              <span class="chipsgrp"><span class="chip-pill">smoker</span><span class="chip-pill">ex-smoker</span><span class="chip-pill">non-smoker</span></span>
+            </div>
+            <div class="children" id="smokingChildren">
+              <div class="dropline" id="dropline"></div>
+              <!-- Smoking pack years (SELECTED, draggable) -->
+              <div class="qrow child selrow fld" id="packRow">
+                <span class="grip"><svg width="16" height="16" viewBox="0 0 6.83333 12.1667" fill="none" preserveAspectRatio="xMidYMid meet" style="display:block"><path d="M1.41667 6.75C1.78486 6.75 2.08333 6.45152 2.08333 6.08333C2.08333 5.71514 1.78486 5.41667 1.41667 5.41667C1.04848 5.41667 0.75 5.71514 0.75 6.08333C0.75 6.45152 1.04848 6.75 1.41667 6.75Z" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" vector-effect="non-scaling-stroke"/><path d="M1.41667 2.08333C1.78486 2.08333 2.08333 1.78486 2.08333 1.41667C2.08333 1.04848 1.78486 0.75 1.41667 0.75C1.04848 0.75 0.75 1.04848 0.75 1.41667C0.75 1.78486 1.04848 2.08333 1.41667 2.08333Z" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" vector-effect="non-scaling-stroke"/><path d="M1.41667 11.4167C1.78486 11.4167 2.08333 11.1182 2.08333 10.75C2.08333 10.3818 1.78486 10.0833 1.41667 10.0833C1.04848 10.0833 0.75 10.3818 0.75 10.75C0.75 11.1182 1.04848 11.4167 1.41667 11.4167Z" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" vector-effect="non-scaling-stroke"/><path d="M5.41667 6.75C5.78486 6.75 6.08333 6.45152 6.08333 6.08333C6.08333 5.71514 5.78486 5.41667 5.41667 5.41667C5.04848 5.41667 4.75 5.71514 4.75 6.08333C4.75 6.45152 5.04848 6.75 5.41667 6.75Z" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" vector-effect="non-scaling-stroke"/><path d="M5.41667 2.08333C5.78486 2.08333 6.08333 1.78486 6.08333 1.41667C6.08333 1.04848 5.78486 0.75 5.41667 0.75C5.04848 0.75 4.75 1.04848 4.75 1.41667C4.75 1.78486 5.04848 2.08333 5.41667 2.08333Z" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" vector-effect="non-scaling-stroke"/><path d="M5.41667 11.4167C5.78486 11.4167 6.08333 11.1182 6.08333 10.75C6.08333 10.3818 5.78486 10.0833 5.41667 10.0833C5.04848 10.0833 4.75 10.3818 4.75 10.75C4.75 11.1182 5.04848 11.4167 5.41667 11.4167Z" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" vector-effect="non-scaling-stroke"/></svg></span>
+                <span class="qtitle">Smoking pack years <span class="req" id="reqStar">*</span></span>
+                <span class="unitfield"><span class="num">...</span><span class="udiv"></span><span class="unit">packyears</span></span>
+                <span class="rowmore"><svg width="18" height="18" viewBox="0 0 12.1667 2.83333" fill="none" preserveAspectRatio="xMidYMid meet" style="display:block"><path d="M6.08333 2.08333C6.45152 2.08333 6.75 1.78486 6.75 1.41667C6.75 1.04848 6.45152 0.75 6.08333 0.75C5.71514 0.75 5.41667 1.04848 5.41667 1.41667C5.41667 1.78486 5.71514 2.08333 6.08333 2.08333Z" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" vector-effect="non-scaling-stroke"/><path d="M10.75 2.08333C11.1182 2.08333 11.4167 1.78486 11.4167 1.41667C11.4167 1.04848 11.1182 0.75 10.75 0.75C10.3818 0.75 10.0833 1.04848 10.0833 1.41667C10.0833 1.78486 10.3818 2.08333 10.75 2.08333Z" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" vector-effect="non-scaling-stroke"/><path d="M1.41667 2.08333C1.78486 2.08333 2.08333 1.78486 2.08333 1.41667C2.08333 1.04848 1.78486 0.75 1.41667 0.75C1.04848 0.75 0.75 1.04848 0.75 1.41667C0.75 1.78486 1.04848 2.08333 1.41667 2.08333Z" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" vector-effect="non-scaling-stroke"/></svg></span>
+              </div>
+              <!-- Stopped smoking since -->
+              <div class="qrow child fld" id="stopRow">
+                <span class="grip"><svg width="16" height="16" viewBox="0 0 6.83333 12.1667" fill="none" preserveAspectRatio="xMidYMid meet" style="display:block"><path d="M1.41667 6.75C1.78486 6.75 2.08333 6.45152 2.08333 6.08333C2.08333 5.71514 1.78486 5.41667 1.41667 5.41667C1.04848 5.41667 0.75 5.71514 0.75 6.08333C0.75 6.45152 1.04848 6.75 1.41667 6.75Z" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" vector-effect="non-scaling-stroke"/><path d="M1.41667 2.08333C1.78486 2.08333 2.08333 1.78486 2.08333 1.41667C2.08333 1.04848 1.78486 0.75 1.41667 0.75C1.04848 0.75 0.75 1.04848 0.75 1.41667C0.75 1.78486 1.04848 2.08333 1.41667 2.08333Z" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" vector-effect="non-scaling-stroke"/><path d="M1.41667 11.4167C1.78486 11.4167 2.08333 11.1182 2.08333 10.75C2.08333 10.3818 1.78486 10.0833 1.41667 10.0833C1.04848 10.0833 0.75 10.3818 0.75 10.75C0.75 11.1182 1.04848 11.4167 1.41667 11.4167Z" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" vector-effect="non-scaling-stroke"/><path d="M5.41667 6.75C5.78486 6.75 6.08333 6.45152 6.08333 6.08333C6.08333 5.71514 5.78486 5.41667 5.41667 5.41667C5.04848 5.41667 4.75 5.71514 4.75 6.08333C4.75 6.45152 5.04848 6.75 5.41667 6.75Z" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" vector-effect="non-scaling-stroke"/><path d="M5.41667 2.08333C5.78486 2.08333 6.08333 1.78486 6.08333 1.41667C6.08333 1.04848 5.78486 0.75 5.41667 0.75C5.04848 0.75 4.75 1.04848 4.75 1.41667C4.75 1.78486 5.04848 2.08333 5.41667 2.08333Z" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" vector-effect="non-scaling-stroke"/><path d="M5.41667 11.4167C5.78486 11.4167 6.08333 11.1182 6.08333 10.75C6.08333 10.3818 5.78486 10.0833 5.41667 10.0833C5.04848 10.0833 4.75 10.3818 4.75 10.75C4.75 11.1182 5.04848 11.4167 5.41667 11.4167Z" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" vector-effect="non-scaling-stroke"/></svg></span>
+                <span class="qtitle">Stopped smoking since</span>
+                <span class="datefield"><span class="dph">dd.mm.yyyy</span><svg width="18" height="18" viewBox="0 0 18.8452 21.8333" fill="none" preserveAspectRatio="xMidYMid meet" style="display:block"><path d="M5.77732 3.91211V7.14727M13.0679 3.91211V7.14727M1.8457 10.3824H16.9995M3.41835 5.52969H15.4269C16.2954 5.52969 16.9995 6.2539 16.9995 7.14727V18.4703C16.9995 19.3637 16.2954 20.0879 15.4269 20.0879H3.41835C2.5498 20.0879 1.8457 19.3637 1.8457 18.4703V7.14727C1.8457 6.2539 2.5498 5.52969 3.41835 5.52969Z" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" vector-effect="non-scaling-stroke"/></svg></span>
+              </div>
+            </div>
+
+            <!-- ===== TYPE SURGERY group ===== -->
+            <div class="qrow grouphead tsurg">
+              <span class="chev"><svg width="14" height="14" viewBox="0 0 9.5 5.5" fill="none" style="display:block"><path d="M8.75 4.75L4.75 0.75L0.75 4.75" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/></svg></span>
+              <span class="grip"><svg width="16" height="16" viewBox="0 0 6.83333 12.1667" fill="none" preserveAspectRatio="xMidYMid meet" style="display:block"><path d="M1.41667 6.75C1.78486 6.75 2.08333 6.45152 2.08333 6.08333C2.08333 5.71514 1.78486 5.41667 1.41667 5.41667C1.04848 5.41667 0.75 5.71514 0.75 6.08333C0.75 6.45152 1.04848 6.75 1.41667 6.75Z" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" vector-effect="non-scaling-stroke"/><path d="M1.41667 2.08333C1.78486 2.08333 2.08333 1.78486 2.08333 1.41667C2.08333 1.04848 1.78486 0.75 1.41667 0.75C1.04848 0.75 0.75 1.04848 0.75 1.41667C0.75 1.78486 1.04848 2.08333 1.41667 2.08333Z" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" vector-effect="non-scaling-stroke"/><path d="M1.41667 11.4167C1.78486 11.4167 2.08333 11.1182 2.08333 10.75C2.08333 10.3818 1.78486 10.0833 1.41667 10.0833C1.04848 10.0833 0.75 10.3818 0.75 10.75C0.75 11.1182 1.04848 11.4167 1.41667 11.4167Z" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" vector-effect="non-scaling-stroke"/><path d="M5.41667 6.75C5.78486 6.75 6.08333 6.45152 6.08333 6.08333C6.08333 5.71514 5.78486 5.41667 5.41667 5.41667C5.04848 5.41667 4.75 5.71514 4.75 6.08333C4.75 6.45152 5.04848 6.75 5.41667 6.75Z" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" vector-effect="non-scaling-stroke"/><path d="M5.41667 2.08333C5.78486 2.08333 6.08333 1.78486 6.08333 1.41667C6.08333 1.04848 5.78486 0.75 5.41667 0.75C5.04848 0.75 4.75 1.04848 4.75 1.41667C4.75 1.78486 5.04848 2.08333 5.41667 2.08333Z" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" vector-effect="non-scaling-stroke"/><path d="M5.41667 11.4167C5.78486 11.4167 6.08333 11.1182 6.08333 10.75C6.08333 10.3818 5.78486 10.0833 5.41667 10.0833C5.04848 10.0833 4.75 10.3818 4.75 10.75C4.75 11.1182 5.04848 11.4167 5.41667 11.4167Z" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" vector-effect="non-scaling-stroke"/></svg></span>
+              <span class="qtitle">Type surgery</span>
+              <span class="chipsgrp"><span class="chip-pill">total colectomy with IRA</span><span class="chip-pill">total colectomy with EI</span><span class="chip-pill">proctolectomy with IPAA</span><span class="chip-pill">proctolectomy with EI</span></span>
+            </div>
+            <div class="children">
+              <!-- Type pouch -->
+              <div class="qrow child">
+                <span class="grip"><svg width="16" height="16" viewBox="0 0 6.83333 12.1667" fill="none" preserveAspectRatio="xMidYMid meet" style="display:block"><path d="M1.41667 6.75C1.78486 6.75 2.08333 6.45152 2.08333 6.08333C2.08333 5.71514 1.78486 5.41667 1.41667 5.41667C1.04848 5.41667 0.75 5.71514 0.75 6.08333C0.75 6.45152 1.04848 6.75 1.41667 6.75Z" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" vector-effect="non-scaling-stroke"/><path d="M1.41667 2.08333C1.78486 2.08333 2.08333 1.78486 2.08333 1.41667C2.08333 1.04848 1.78486 0.75 1.41667 0.75C1.04848 0.75 0.75 1.04848 0.75 1.41667C0.75 1.78486 1.04848 2.08333 1.41667 2.08333Z" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" vector-effect="non-scaling-stroke"/><path d="M1.41667 11.4167C1.78486 11.4167 2.08333 11.1182 2.08333 10.75C2.08333 10.3818 1.78486 10.0833 1.41667 10.0833C1.04848 10.0833 0.75 10.3818 0.75 10.75C0.75 11.1182 1.04848 11.4167 1.41667 11.4167Z" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" vector-effect="non-scaling-stroke"/><path d="M5.41667 6.75C5.78486 6.75 6.08333 6.45152 6.08333 6.08333C6.08333 5.71514 5.78486 5.41667 5.41667 5.41667C5.04848 5.41667 4.75 5.71514 4.75 6.08333C4.75 6.45152 5.04848 6.75 5.41667 6.75Z" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" vector-effect="non-scaling-stroke"/><path d="M5.41667 2.08333C5.78486 2.08333 6.08333 1.78486 6.08333 1.41667C6.08333 1.04848 5.78486 0.75 5.41667 0.75C5.04848 0.75 4.75 1.04848 4.75 1.41667C4.75 1.78486 5.04848 2.08333 5.41667 2.08333Z" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" vector-effect="non-scaling-stroke"/><path d="M5.41667 11.4167C5.78486 11.4167 6.08333 11.1182 6.08333 10.75C6.08333 10.3818 5.78486 10.0833 5.41667 10.0833C5.04848 10.0833 4.75 10.3818 4.75 10.75C4.75 11.1182 5.04848 11.4167 5.41667 11.4167Z" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" vector-effect="non-scaling-stroke"/></svg></span>
+                <span class="qtitle">Type pouch</span>
+                <span class="chipsgrp"><span class="chip-pill">J-pouch</span><span class="chip-pill">S-pouch</span><span class="chip-pill">W-pouch</span></span>
+              </div>
+              <!-- Pouch failure group -->
+              <div class="qrow grouphead">
+                <span class="chev"><svg width="14" height="14" viewBox="0 0 9.5 5.5" fill="none" style="display:block"><path d="M8.75 4.75L4.75 0.75L0.75 4.75" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/></svg></span>
+                <span class="grip"><svg width="16" height="16" viewBox="0 0 6.83333 12.1667" fill="none" preserveAspectRatio="xMidYMid meet" style="display:block"><path d="M1.41667 6.75C1.78486 6.75 2.08333 6.45152 2.08333 6.08333C2.08333 5.71514 1.78486 5.41667 1.41667 5.41667C1.04848 5.41667 0.75 5.71514 0.75 6.08333C0.75 6.45152 1.04848 6.75 1.41667 6.75Z" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" vector-effect="non-scaling-stroke"/><path d="M1.41667 2.08333C1.78486 2.08333 2.08333 1.78486 2.08333 1.41667C2.08333 1.04848 1.78486 0.75 1.41667 0.75C1.04848 0.75 0.75 1.04848 0.75 1.41667C0.75 1.78486 1.04848 2.08333 1.41667 2.08333Z" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" vector-effect="non-scaling-stroke"/><path d="M1.41667 11.4167C1.78486 11.4167 2.08333 11.1182 2.08333 10.75C2.08333 10.3818 1.78486 10.0833 1.41667 10.0833C1.04848 10.0833 0.75 10.3818 0.75 10.75C0.75 11.1182 1.04848 11.4167 1.41667 11.4167Z" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" vector-effect="non-scaling-stroke"/><path d="M5.41667 6.75C5.78486 6.75 6.08333 6.45152 6.08333 6.08333C6.08333 5.71514 5.78486 5.41667 5.41667 5.41667C5.04848 5.41667 4.75 5.71514 4.75 6.08333C4.75 6.45152 5.04848 6.75 5.41667 6.75Z" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" vector-effect="non-scaling-stroke"/><path d="M5.41667 2.08333C5.78486 2.08333 6.08333 1.78486 6.08333 1.41667C6.08333 1.04848 5.78486 0.75 5.41667 0.75C5.04848 0.75 4.75 1.04848 4.75 1.41667C4.75 1.78486 5.04848 2.08333 5.41667 2.08333Z" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" vector-effect="non-scaling-stroke"/><path d="M5.41667 11.4167C5.78486 11.4167 6.08333 11.1182 6.08333 10.75C6.08333 10.3818 5.78486 10.0833 5.41667 10.0833C5.04848 10.0833 4.75 10.3818 4.75 10.75C4.75 11.1182 5.04848 11.4167 5.41667 11.4167Z" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" vector-effect="non-scaling-stroke"/></svg></span>
+                <span class="qtitle">Pouch faillure</span>
+                <span class="chipsgrp"><span class="chip-pill">yes</span><span class="chip-pill">no</span></span>
+              </div>
+              <div class="children">
+                <!-- Pouchectomy date -->
+                <div class="qrow child">
+                  <span class="grip"><svg width="16" height="16" viewBox="0 0 6.83333 12.1667" fill="none" preserveAspectRatio="xMidYMid meet" style="display:block"><path d="M1.41667 6.75C1.78486 6.75 2.08333 6.45152 2.08333 6.08333C2.08333 5.71514 1.78486 5.41667 1.41667 5.41667C1.04848 5.41667 0.75 5.71514 0.75 6.08333C0.75 6.45152 1.04848 6.75 1.41667 6.75Z" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" vector-effect="non-scaling-stroke"/><path d="M1.41667 2.08333C1.78486 2.08333 2.08333 1.78486 2.08333 1.41667C2.08333 1.04848 1.78486 0.75 1.41667 0.75C1.04848 0.75 0.75 1.04848 0.75 1.41667C0.75 1.78486 1.04848 2.08333 1.41667 2.08333Z" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" vector-effect="non-scaling-stroke"/><path d="M1.41667 11.4167C1.78486 11.4167 2.08333 11.1182 2.08333 10.75C2.08333 10.3818 1.78486 10.0833 1.41667 10.0833C1.04848 10.0833 0.75 10.3818 0.75 10.75C0.75 11.1182 1.04848 11.4167 1.41667 11.4167Z" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" vector-effect="non-scaling-stroke"/><path d="M5.41667 6.75C5.78486 6.75 6.08333 6.45152 6.08333 6.08333C6.08333 5.71514 5.78486 5.41667 5.41667 5.41667C5.04848 5.41667 4.75 5.71514 4.75 6.08333C4.75 6.45152 5.04848 6.75 5.41667 6.75Z" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" vector-effect="non-scaling-stroke"/><path d="M5.41667 2.08333C5.78486 2.08333 6.08333 1.78486 6.08333 1.41667C6.08333 1.04848 5.78486 0.75 5.41667 0.75C5.04848 0.75 4.75 1.04848 4.75 1.41667C4.75 1.78486 5.04848 2.08333 5.41667 2.08333Z" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" vector-effect="non-scaling-stroke"/><path d="M5.41667 11.4167C5.78486 11.4167 6.08333 11.1182 6.08333 10.75C6.08333 10.3818 5.78486 10.0833 5.41667 10.0833C5.04848 10.0833 4.75 10.3818 4.75 10.75C4.75 11.1182 5.04848 11.4167 5.41667 11.4167Z" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" vector-effect="non-scaling-stroke"/></svg></span>
+                  <span class="qtitle">Pouchectomy date</span>
+                  <span class="datefield"><span class="dph">dd.mm.yyyy</span><svg width="18" height="18" viewBox="0 0 18.8452 21.8333" fill="none" preserveAspectRatio="xMidYMid meet" style="display:block"><path d="M5.77732 3.91211V7.14727M13.0679 3.91211V7.14727M1.8457 10.3824H16.9995M3.41835 5.52969H15.4269C16.2954 5.52969 16.9995 6.2539 16.9995 7.14727V18.4703C16.9995 19.3637 16.2954 20.0879 15.4269 20.0879H3.41835C2.5498 20.0879 1.8457 19.3637 1.8457 18.4703V7.14727C1.8457 6.2539 2.5498 5.52969 3.41835 5.52969Z" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" vector-effect="non-scaling-stroke"/></svg></span>
+                </div>
+                <!-- Type pouch (failure type) -->
+                <div class="qrow child">
+                  <span class="grip"><svg width="16" height="16" viewBox="0 0 6.83333 12.1667" fill="none" preserveAspectRatio="xMidYMid meet" style="display:block"><path d="M1.41667 6.75C1.78486 6.75 2.08333 6.45152 2.08333 6.08333C2.08333 5.71514 1.78486 5.41667 1.41667 5.41667C1.04848 5.41667 0.75 5.71514 0.75 6.08333C0.75 6.45152 1.04848 6.75 1.41667 6.75Z" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" vector-effect="non-scaling-stroke"/><path d="M1.41667 2.08333C1.78486 2.08333 2.08333 1.78486 2.08333 1.41667C2.08333 1.04848 1.78486 0.75 1.41667 0.75C1.04848 0.75 0.75 1.04848 0.75 1.41667C0.75 1.78486 1.04848 2.08333 1.41667 2.08333Z" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" vector-effect="non-scaling-stroke"/><path d="M1.41667 11.4167C1.78486 11.4167 2.08333 11.1182 2.08333 10.75C2.08333 10.3818 1.78486 10.0833 1.41667 10.0833C1.04848 10.0833 0.75 10.3818 0.75 10.75C0.75 11.1182 1.04848 11.4167 1.41667 11.4167Z" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" vector-effect="non-scaling-stroke"/><path d="M5.41667 6.75C5.78486 6.75 6.08333 6.45152 6.08333 6.08333C6.08333 5.71514 5.78486 5.41667 5.41667 5.41667C5.04848 5.41667 4.75 5.71514 4.75 6.08333C4.75 6.45152 5.04848 6.75 5.41667 6.75Z" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" vector-effect="non-scaling-stroke"/><path d="M5.41667 2.08333C5.78486 2.08333 6.08333 1.78486 6.08333 1.41667C6.08333 1.04848 5.78486 0.75 5.41667 0.75C5.04848 0.75 4.75 1.04848 4.75 1.41667C4.75 1.78486 5.04848 2.08333 5.41667 2.08333Z" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" vector-effect="non-scaling-stroke"/><path d="M5.41667 11.4167C5.78486 11.4167 6.08333 11.1182 6.08333 10.75C6.08333 10.3818 5.78486 10.0833 5.41667 10.0833C5.04848 10.0833 4.75 10.3818 4.75 10.75C4.75 11.1182 5.04848 11.4167 5.41667 11.4167Z" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" vector-effect="non-scaling-stroke"/></svg></span>
+                  <span class="qtitle">Type pouch</span>
+                  <span class="chipsgrp"><span class="chip-pill">leakage</span><span class="chip-pill">mechanical</span><span class="chip-pill">cuffitis</span></span>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          <div class="addq">Add question</div>
+        </div></div>
+        <div class="addblock">Add block</div>
+      </div>
+    </div>
+
+    <!-- properties panel -->
+    <div class="props" id="props">
+      <div class="psec">
+        <div class="h">General</div>
+        <div class="combo"><span class="lbl">Coding</span>
+          <div class="field">
+            <span class="val">Smoking pack years</span>
+            <span class="closex"><svg width="14" height="14" viewBox="0 0 9.5 9.5" fill="none" preserveAspectRatio="xMidYMid meet" style="display:block"><path d="M8.75 0.75L0.75 8.75M0.75 0.75L8.75 8.75" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" vector-effect="non-scaling-stroke"/></svg></span>
+            <span class="vdiv"></span><span class="chev2"><svg width="12" height="12" viewBox="0 0 5.5 9.5" fill="none" preserveAspectRatio="xMidYMid meet" style="display:block"><path d="M4.75 2.75L2.75 0.75L0.75 2.75M0.75 6.75L2.75 8.75L4.75 6.75" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" vector-effect="non-scaling-stroke"/></svg></span>
+          </div>
+        </div>
+        <div class="switch"><svg width="44" height="24" viewBox="0 0 44 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex:none"><path d="M0 12C0 5.37258 5.37258 0 12 0H32C38.6274 0 44 5.37258 44 12C44 18.6274 38.6274 24 32 24H12C5.37258 24 0 18.6274 0 12Z" fill="#3E5BFD"/><circle cx="32" cy="12" r="10" fill="#FEFEFE"/></svg><span class="swlabel">Use code as question</span></div>
+        <div class="switch"><svg width="44" height="24" viewBox="0 0 44 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex:none"><path d="M12 0.5H32C38.3513 0.5 43.5 5.64873 43.5 12C43.5 18.3513 38.3513 23.5 32 23.5H12C5.64873 23.5 0.5 18.3513 0.5 12C0.5 5.64873 5.64873 0.5 12 0.5Z" fill="#FEFEFE"/><path d="M12 0.5H32C38.3513 0.5 43.5 5.64873 43.5 12C43.5 18.3513 38.3513 23.5 32 23.5H12C5.64873 23.5 0.5 18.3513 0.5 12C0.5 5.64873 5.64873 0.5 12 0.5Z" stroke="#C8C8DE"/><circle cx="12" cy="12" r="6" fill="#9CA3AF"/></svg><span class="swlabel">Informative content</span></div>
+      </div>
+      <div class="pdivider"></div>
+      <div class="psec">
+        <div class="h">Control</div>
+        <div class="switch"><svg width="44" height="24" viewBox="0 0 44 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex:none"><path d="M0 12C0 5.37258 5.37258 0 12 0H32C38.6274 0 44 5.37258 44 12C44 18.6274 38.6274 24 32 24H12C5.37258 24 0 18.6274 0 12Z" fill="#3E5BFD"/><circle cx="32" cy="12" r="10" fill="#FEFEFE"/></svg><span class="swlabel">Unit</span></div>
+        <div class="combo"><span class="lbl">Unit type</span>
+          <div class="field">
+            <span class="val">packyears</span>
+            <span class="closex"><svg width="14" height="14" viewBox="0 0 9.5 9.5" fill="none" preserveAspectRatio="xMidYMid meet" style="display:block"><path d="M8.75 0.75L0.75 8.75M0.75 0.75L8.75 8.75" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" vector-effect="non-scaling-stroke"/></svg></span>
+            <span class="vdiv"></span><span class="chev2"><svg width="12" height="12" viewBox="0 0 5.5 9.5" fill="none" preserveAspectRatio="xMidYMid meet" style="display:block"><path d="M4.75 2.75L2.75 0.75L0.75 2.75M0.75 6.75L2.75 8.75L4.75 6.75" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" vector-effect="non-scaling-stroke"/></svg></span>
+          </div>
+        </div>
+      </div>
+      <div class="pdivider"></div>
+      <div class="psec">
+        <div class="h">Validation</div>
+        <div class="switch"><span class="tgl on" id="reqTgl"><span class="knob"></span></span><span class="swlabel">Required</span></div>
+        <div class="combo"><span class="lbl">Min number</span>
+          <div class="field"><span class="val isph">Placeholder</span></div>
+        </div>
+        <div class="combo"><span class="lbl">Max number</span>
+          <div class="field"><span class="val isph">Placeholder</span></div>
+        </div>
+      </div>
+      <div class="pdivider"></div>
+      <div class="psec">
+        <div class="h">Logic</div>
+        <div class="switch"><svg width="44" height="24" viewBox="0 0 44 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex:none"><path d="M12 0.5H32C38.3513 0.5 43.5 5.64873 43.5 12C43.5 18.3513 38.3513 23.5 32 23.5H12C5.64873 23.5 0.5 18.3513 0.5 12C0.5 5.64873 5.64873 0.5 12 0.5Z" fill="#FEFEFE"/><path d="M12 0.5H32C38.3513 0.5 43.5 5.64873 43.5 12C43.5 18.3513 38.3513 23.5 32 23.5H12C5.64873 23.5 0.5 18.3513 0.5 12C0.5 5.64873 5.64873 0.5 12 0.5Z" stroke="#C8C8DE"/><circle cx="12" cy="12" r="6" fill="#9CA3AF"/></svg><span class="swlabel">Conditional logic</span></div>
+      </div>
+    </div>
+
+    <!-- animated cursor -->
+    <div class="cursor" id="cursor">
+      <span class="lyr arrow"><svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M5 2.5L5 19.5L9.4 15.3L12.1 21L14.7 19.8L12 14.2L18 14.2Z" fill="#16202B" stroke="#fefefe" stroke-width="1.4" stroke-linejoin="round"/></svg></span>
+      <span class="lyr open"><svg width="31" height="31" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M10.3884 8.20478C11.1414 7.90358 12.4968 8.05418 12.9486 8.95777C13.2498 9.71075 13.551 10.7649 13.551 10.6143C13.551 10.0119 13.551 8.80717 13.7016 8.20478C13.8522 7.75299 14.1534 7.3012 14.7558 7.1506C15.2076 7 15.6594 7 16.1111 7C16.5629 7.1506 17.0147 7.45179 17.3159 7.75299C17.9183 8.65657 17.9183 10.6143 17.9183 10.4637C18.0689 10.0119 18.0689 8.65657 18.3701 8.05418C18.5207 7.75299 19.1231 7.45179 19.4243 7.30119C19.8761 7.1506 20.4785 7.1506 20.9303 7.30119C21.2315 7.30119 21.8338 7.75299 21.9844 8.05418C22.2856 8.50597 22.4362 10.0119 22.5868 10.6143C22.5868 10.7649 22.7374 10.0119 23.0386 9.56016C23.641 8.65657 25.7494 8.35538 25.9 10.4637C25.9 11.5179 25.9 11.3673 25.9 12.1203C25.9 12.8733 25.9 13.3251 25.9 13.9275C25.9 14.5299 25.7494 15.8852 25.5988 16.4876C25.4482 16.9394 24.9964 17.9936 24.5446 18.596C24.5446 18.596 22.888 20.4032 22.7374 21.3068C22.5868 22.2103 22.5868 22.2103 22.5868 22.8127C22.5868 23.4151 22.7374 24.1681 22.7374 24.1681C22.7374 24.1681 21.5327 24.3187 20.9303 24.1681C20.3279 24.0175 19.5749 22.9633 19.4243 22.5115C19.1231 22.0597 18.6713 22.0597 18.3701 22.5115C18.0689 23.1139 17.3159 24.1681 16.8641 24.1681C15.8099 24.3187 13.7016 24.1681 12.1956 24.1681C12.1956 24.1681 12.4968 22.6621 11.8944 22.0597C11.4426 21.608 10.6896 20.855 10.2378 20.4032L9.03306 19.0478C8.58127 18.4454 7.52709 17.6924 7.2259 16.0358C6.9247 14.6805 6.9247 13.9275 7.2259 13.3251C7.52709 12.7227 8.28008 12.4215 8.58127 12.4215C8.88247 12.4215 9.63546 12.4215 9.93665 12.5721C10.2378 12.7227 10.3884 12.8733 10.6896 13.1745C10.9908 13.6263 11.1414 13.9275 10.9908 13.3251C10.8402 12.8733 10.539 12.4215 10.3884 11.8191C10.2378 11.2167 9.78605 10.4637 9.78605 9.56016C9.03306 9.56016 9.18366 8.65657 10.3884 8.20478Z" fill="white"/><path d="M10.3884 8.20478C11.1414 7.90358 12.4968 8.05418 12.9486 8.95777C13.2498 9.71075 13.551 10.7649 13.551 10.6143C13.551 10.0119 13.551 8.80717 13.7016 8.20478C13.8522 7.75299 14.1534 7.3012 14.7558 7.1506C15.2076 7 15.6594 7 16.1111 7C16.5629 7.1506 17.0147 7.45179 17.3159 7.75299C17.9183 8.65657 17.9183 10.6143 17.9183 10.4637C18.0689 10.0119 18.0689 8.65657 18.3701 8.05418C18.5207 7.75299 19.1231 7.45179 19.4243 7.30119C19.8761 7.1506 20.4785 7.1506 20.9303 7.30119C21.2315 7.30119 21.8338 7.75299 21.9844 8.05418C22.2856 8.50597 22.4362 10.0119 22.5868 10.6143C22.5868 10.7649 22.7374 10.0119 23.0386 9.56016C23.641 8.65657 25.7494 8.35538 25.9 10.4637C25.9 11.5179 25.9 11.3673 25.9 12.1203C25.9 12.8733 25.9 13.3251 25.9 13.9275C25.9 14.5299 25.7494 15.8852 25.5988 16.4876C25.4482 16.9394 24.9964 17.9936 24.5446 18.596C24.5446 18.596 22.888 20.4032 22.7374 21.3068C22.5868 22.2103 22.5868 22.2103 22.5868 22.8127C22.5868 23.4151 22.7374 24.1681 22.7374 24.1681C22.7374 24.1681 21.5327 24.3187 20.9303 24.1681C20.3279 24.0175 19.5749 22.9633 19.4243 22.5115C19.1231 22.0597 18.6713 22.0597 18.3701 22.5115C18.0689 23.1139 17.3159 24.1681 16.8641 24.1681C15.8099 24.3187 13.7016 24.1681 12.1956 24.1681C12.1956 24.1681 12.4968 22.6621 11.8944 22.0597C11.4426 21.608 10.6896 20.855 10.2378 20.4032L9.03306 19.0478C8.58127 18.4454 7.52709 17.6924 7.2259 16.0358C6.9247 14.6805 6.9247 13.9275 7.2259 13.3251C7.52709 12.7227 8.28008 12.4215 8.58127 12.4215C8.88247 12.4215 9.63546 12.4215 9.93665 12.5721C10.2378 12.7227 10.3884 12.8733 10.6896 13.1745C10.9908 13.6263 11.1414 13.9275 10.9908 13.3251C10.8402 12.8733 10.539 12.4215 10.3884 11.8191C10.2378 11.2167 9.78605 10.4637 9.78605 9.56016C9.03306 9.56016 9.18366 8.65657 10.3884 8.20478Z" stroke="black" stroke-linejoin="round"/><path d="M20.9303 19.8007V14.6804" stroke="black" stroke-linecap="round"/><path d="M17.9183 19.8007L17.7677 14.6804" stroke="black" stroke-linecap="round"/><path d="M14.9064 14.6804V19.8007" stroke="black" stroke-linecap="round"/></svg></span>
+      <span class="lyr grabh"><svg width="31" height="31" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M10.3884 8.20478C11.1414 7.90358 12.4968 8.05418 12.9486 8.95777C13.2498 9.71075 13.551 10.7649 13.551 10.6143C13.551 10.0119 13.551 8.80717 13.7016 8.20478C13.8522 7.75299 14.1534 7.3012 14.7558 7.1506C15.2076 7 15.6594 7 16.1111 7C16.5629 7.1506 17.0147 7.45179 17.3159 7.75299C17.9183 8.65657 17.9183 10.6143 17.9183 10.4637C18.0689 10.0119 18.0689 8.65657 18.3701 8.05418C18.5207 7.75299 19.1231 7.45179 19.4243 7.30119C19.8761 7.1506 20.4785 7.1506 20.9303 7.30119C21.2315 7.30119 21.8338 7.75299 21.9844 8.05418C22.2856 8.50597 22.4362 10.0119 22.5868 10.6143C22.5868 10.7649 22.7374 10.0119 23.0386 9.56016C23.641 8.65657 25.7494 8.35538 25.9 10.4637C25.9 11.5179 25.9 11.3673 25.9 12.1203C25.9 12.8733 25.9 13.3251 25.9 13.9275C25.9 14.5299 25.7494 15.8852 25.5988 16.4876C25.4482 16.9394 24.9964 17.9936 24.5446 18.596C24.5446 18.596 22.888 20.4032 22.7374 21.3068C22.5868 22.2103 22.5868 22.2103 22.5868 22.8127C22.5868 23.4151 22.7374 24.1681 22.7374 24.1681C22.7374 24.1681 21.5327 24.3187 20.9303 24.1681C20.3279 24.0175 19.5749 22.9633 19.4243 22.5115C19.1231 22.0597 18.6713 22.0597 18.3701 22.5115C18.0689 23.1139 17.3159 24.1681 16.8641 24.1681C15.8099 24.3187 13.7016 24.1681 12.1956 24.1681C12.1956 24.1681 12.4968 22.6621 11.8944 22.0597C11.4426 21.608 10.6896 20.855 10.2378 20.4032L9.03306 19.0478C8.58127 18.4454 7.52709 17.6924 7.2259 16.0358C6.9247 14.6805 6.9247 13.9275 7.2259 13.3251C7.52709 12.7227 8.28008 12.4215 8.58127 12.4215C8.88247 12.4215 9.63546 12.4215 9.93665 12.5721C10.2378 12.7227 10.3884 12.8733 10.6896 13.1745C10.9908 13.6263 11.1414 13.9275 10.9908 13.3251C10.8402 12.8733 10.539 12.4215 10.3884 11.8191C10.2378 11.2167 9.78605 10.4637 9.78605 9.56016C9.03306 9.56016 9.18366 8.65657 10.3884 8.20478Z" fill="white"/><path d="M10.3884 8.20478C11.1414 7.90358 12.4968 8.05418 12.9486 8.95777C13.2498 9.71075 13.551 10.7649 13.551 10.6143C13.551 10.0119 13.551 8.80717 13.7016 8.20478C13.8522 7.75299 14.1534 7.3012 14.7558 7.1506C15.2076 7 15.6594 7 16.1111 7C16.5629 7.1506 17.0147 7.45179 17.3159 7.75299C17.9183 8.65657 17.9183 10.6143 17.9183 10.4637C18.0689 10.0119 18.0689 8.65657 18.3701 8.05418C18.5207 7.75299 19.1231 7.45179 19.4243 7.30119C19.8761 7.1506 20.4785 7.1506 20.9303 7.30119C21.2315 7.30119 21.8338 7.75299 21.9844 8.05418C22.2856 8.50597 22.4362 10.0119 22.5868 10.6143C22.5868 10.7649 22.7374 10.0119 23.0386 9.56016C23.641 8.65657 25.7494 8.35538 25.9 10.4637C25.9 11.5179 25.9 11.3673 25.9 12.1203C25.9 12.8733 25.9 13.3251 25.9 13.9275C25.9 14.5299 25.7494 15.8852 25.5988 16.4876C25.4482 16.9394 24.9964 17.9936 24.5446 18.596C24.5446 18.596 22.888 20.4032 22.7374 21.3068C22.5868 22.2103 22.5868 22.2103 22.5868 22.8127C22.5868 23.4151 22.7374 24.1681 22.7374 24.1681C22.7374 24.1681 21.5327 24.3187 20.9303 24.1681C20.3279 24.0175 19.5749 22.9633 19.4243 22.5115C19.1231 22.0597 18.6713 22.0597 18.3701 22.5115C18.0689 23.1139 17.3159 24.1681 16.8641 24.1681C15.8099 24.3187 13.7016 24.1681 12.1956 24.1681C12.1956 24.1681 12.4968 22.6621 11.8944 22.0597C11.4426 21.608 10.6896 20.855 10.2378 20.4032L9.03306 19.0478C8.58127 18.4454 7.52709 17.6924 7.2259 16.0358C6.9247 14.6805 6.9247 13.9275 7.2259 13.3251C7.52709 12.7227 8.28008 12.4215 8.58127 12.4215C8.88247 12.4215 9.63546 12.4215 9.93665 12.5721C10.2378 12.7227 10.3884 12.8733 10.6896 13.1745C10.9908 13.6263 11.1414 13.9275 10.9908 13.3251C10.8402 12.8733 10.539 12.4215 10.3884 11.8191C10.2378 11.2167 9.78605 10.4637 9.78605 9.56016C9.03306 9.56016 9.18366 8.65657 10.3884 8.20478Z" stroke="black" stroke-linejoin="round"/><path d="M20.9303 19.8007V14.6804" stroke="black" stroke-linecap="round"/><path d="M17.9183 19.8007L17.7677 14.6804" stroke="black" stroke-linecap="round"/><path d="M14.9064 14.6804V19.8007" stroke="black" stroke-linecap="round"/></svg></span>
+    </div>
+
+  </div>
+ </div>
+</div></div></div>
+
+<script>
+const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const sleep = ms => new Promise(r=>setTimeout(r,ms));
+const raf2 = () => new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
+const $ = id => document.getElementById(id);
+
+function fit(){ const f=document.querySelector('.frame'); $('scaler').style.transform='scale('+(f.clientWidth/1280)+')'; }
+addEventListener('resize',fit); fit(); new ResizeObserver(fit).observe(document.querySelector('.frame'));
+
+const stage=document.querySelector('.body2'), cursor=$('cursor'),
+      packRow=$('packRow'), stopRow=$('stopRow'), smokingChildren=$('smokingChildren'),
+      dropline=$('dropline'), reqTgl=$('reqTgl'), reqStar=$('reqStar');
+const HOT={x:4,y:3};
+
+function appRect(el){ const a=stage.getBoundingClientRect(), s=a.width/1280, r=el.getBoundingClientRect();
+  const x=(r.left-a.left)/s, y=(r.top-a.top)/s, w=r.width/s, h=r.height/s;
+  return {x,y,w,h,cx:x+w/2,cy:y+h/2}; }
+function setMode(m){ cursor.className='cursor'+(m==='arrow'?'':' '+m); }
+function placeCursor(p){ cursor.style.transition='none'; cursor.style.transform=`translate(${p.x-HOT.x}px,${p.y-HOT.y}px)`; void cursor.offsetWidth; cursor.style.transition=''; }
+function moveCursor(p,dur=640){ cursor.style.transitionDuration=(dur/1000)+'s'; cursor.style.transform=`translate(${p.x-HOT.x}px,${p.y-HOT.y}px)`; return sleep(dur); }
+
+// drop-preview line: positioned in #smokingChildren local coords (offsetTop space)
+// drop-preview line — positioned in #smokingChildren local coords (offsetTop space)
+function placeDrop(top){ dropline.style.top=(top-1.25)+'px'; }
+function showDrop(){ dropline.classList.add('show'); }
+function hideDrop(){ dropline.classList.remove('show'); }
+
+// read live translateY (px) of an element mid-transition
+function curY(el){
+  const t=getComputedStyle(el).transform;
+  if(!t||t==='none') return 0;
+  const m=t.match(/matrix\(([^)]+)\)/);  if(m) return parseFloat(m[1].split(',')[5]);
+  const m3=t.match(/matrix3d\(([^)]+)\)/); if(m3) return parseFloat(m3[1].split(',')[13]);
+  return 0;
+}
+// micro-interaction: reveal the line once the dragged row enters the destination area
+function revealLineWhenMoved(el, dist, frac=0.42){
+  const target=Math.abs(dist)*frac;
+  (function step(){
+    if(Math.abs(curY(el))>=target){ showDrop(); return; }
+    requestAnimationFrame(step);
+  })();
+}
+
+// quick "tap" feedback: nudge the cursor down and back
+async function clickFx(){
+  const base=cursor.style.transform;
+  cursor.style.transitionDuration='.09s';
+  cursor.style.transform=base+' translate(0,3px)';
+  await sleep(95);
+  cursor.style.transform=base;
+  await sleep(110);
+}
+
+// generic vertical swap of two adjacent sibling rows; dragged=A (the one the cursor grabs), other=B
+async function swap(A, B, dir){          // dir: 'down' = A goes below B; 'up' = A goes above B
+  const ra=appRect(A), rb=appRect(B);
+  const upper = (ra.y<rb.y)?ra:rb, lower=(ra.y<rb.y)?rb:ra;
+  const gap = lower.y-(upper.y+upper.h);
+  const dA = (dir==='down') ? (rb.h+gap) : -(rb.h+gap);
+  const dB = (dir==='down') ? -(ra.h+gap) : (ra.h+gap);
+
+  // glide to the drag handle of A
+  const handle=A.querySelector('.grip'); const hr=appRect(handle);
+  await moveCursor({x:hr.cx, y:hr.cy}, 600);
+  setMode('grab'); await sleep(150);
+  setMode('grabbing'); await sleep(70);
+
+  // pick up — float the card off the surface (NO preview line yet)
+  A.classList.add('lift');
+  A.style.transition='transform .24s var(--e-spring)';
+  A.style.transform='translateY(-3px) scale(1.02)';
+  const lineTop = (dir==='down')
+      ? (B.offsetTop + B.offsetHeight + 3)
+      : (B.offsetTop - 4);
+  placeDrop(lineTop);                 // position only; line stays hidden until it moves
+  await sleep(190);
+
+  // move — A travels with the cursor; B eases aside to make room
+  const D=620;
+  A.style.transition=`transform ${D/1000}s var(--e-io)`;
+  B.style.transition=`transform ${(D+70)/1000}s var(--e-spring)`;
+  A.style.transform=`translateY(${dA}px) scale(1.02)`;
+  B.style.transform=`translateY(${dB}px)`;
+  moveCursor({x:hr.cx, y:hr.cy+dA}, D);
+  // the line is the movement's answer: it appears as A enters the target slot
+  revealLineWhenMoved(A, dA, 0.42);
+  await sleep(D);
+  await sleep(150);
+
+  // drop — settle gently into the slot; the line recedes as it lands
+  setMode('grab'); await sleep(110);
+  hideDrop();
+  A.classList.remove('lift');
+  A.style.transition='transform .28s var(--e-spring)';
+  A.style.transform=`translateY(${dA}px) scale(1)`;
+  await sleep(240);
+
+  // commit DOM order with transforms cleared in the same frame (no jump)
+  A.style.transition='none'; B.style.transition='none';
+  if(dir==='down') B.after(A); else B.before(A);
+  A.style.transform=''; B.style.transform='';
+  void stage.offsetWidth;
+  // re-anchor the cursor on the handle's new resting position
+  const hr2=appRect(A.querySelector('.grip'));
+  cursor.style.transition='none'; cursor.style.transform=`translate(${hr2.cx-HOT.x}px,${hr2.cy-HOT.y}px)`; void cursor.offsetWidth; cursor.style.transition='';
+  setMode('arrow');
+}
+
+// turn the Required toggle OFF (asterisk vanishes) then back ON (asterisk returns)
+async function toggleRequired(){
+  const r=appRect(reqTgl);
+  await moveCursor({x:r.cx, y:r.cy}, 760);
+  await clickFx();
+  reqTgl.classList.remove('on'); reqTgl.classList.add('off');
+  reqStar.classList.add('off');
+  await sleep(1500);
+  await clickFx();
+  reqTgl.classList.remove('off'); reqTgl.classList.add('on');
+  reqStar.classList.remove('off');
+  await sleep(300);
+}
+
+async function run(){
+  await (document.fonts ? document.fonts.ready : Promise.resolve());
+  await sleep(120); fit();
+  if(reduce){ cursor.style.display='none'; return; }
+
+  // rest the cursor just off the selected row to begin
+  const start=appRect(packRow.querySelector('.grip'));
+  placeCursor({x:start.cx+150, y:start.cy+70});
+
+  while(true){
+    await sleep(1100);
+    // 1 — drag "Smoking pack years" DOWN, below "Stopped smoking since" (preview line appears on movement)
+    await swap(packRow, stopRow, 'down');
+    // 2 — hold for two seconds
+    await sleep(2000);
+    // 3 — move it back UP, above "Stopped smoking since"
+    await swap(packRow, stopRow, 'up');
+    // 4 — settle before looping
+    await sleep(1600);
+  }
+}
+run();
+</script>
+</body></html>

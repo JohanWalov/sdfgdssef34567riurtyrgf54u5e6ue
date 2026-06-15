@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Design System — case study cover</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --ink:#374151; --muted:#6b7280; --line:#e5e7eb; --blue:#1977cd; --red:#dc3030;
+  --surface:#fefefe; --canvas:#fefefe; --toast:#374151;
+  /* easing taken from the reference animations */
+  --e-out:cubic-bezier(.16,1,.3,1);      /* expo-out, smooth deceleration */
+  --e-io:cubic-bezier(.76,0,.24,1);      /* emphasized in-out — cursor travel */
+  --e-pop:cubic-bezier(.34,1.4,.5,1);    /* gentle overshoot */
+  /* presence colours for the 3 people */
+  --p1:#14AE5C; --p2:#7C5CFC; --p3:#EC4899;
+}
+html,body{height:100%}
+body{font-family:'Inter',system-ui,sans-serif;background:#fefefe;
+  -webkit-font-smoothing:antialiased;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:32px 20px}
+
+.frame{position:relative;width:100%;max-width:1180px;aspect-ratio:1280/840;border-radius:18px;overflow:hidden;
+  box-shadow:0 1px 1px rgba(22,32,43,.05),0 14px 30px rgba(22,32,43,.10),0 44px 80px rgba(22,32,43,.12);
+  background:var(--canvas)}
+.scaler{position:absolute;top:0;left:0;width:1280px;height:840px;transform-origin:top left}
+.camera{position:absolute;inset:0;transform-origin:0 0;transition:transform 1.2s var(--e-out);will-change:transform}
+.drift{position:absolute;inset:0;will-change:transform}
+@keyframes drift{0%{transform:translate(0,0)}25%{transform:translate(-9px,6px)}55%{transform:translate(7px,-5px)}80%{transform:translate(-4px,3px)}100%{transform:translate(0,0)}}
+.app{position:absolute;inset:0;width:1280px;height:840px;background:var(--canvas);color:var(--ink)}
+
+
+/* when embedded as a card cover (in an iframe), fill edge-to-edge */
+html.embed,html.embed body{height:100%;width:100%}
+html.embed body{padding:0;display:block;background:var(--canvas)}
+html.embed .frame{width:100%;height:100%;max-width:none;aspect-ratio:auto;border-radius:0;box-shadow:none}
+/* faint grid + glow so the empty canvas reads as a designed space */
+.app::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(circle at 1px 1px,rgba(55,65,81,.05) 1px,transparent 0);
+  background-size:34px 34px;mask-image:radial-gradient(120% 100% at 50% 45%,#000 35%,transparent 80%)}
+.app::after{content:"";position:absolute;left:50%;top:48%;width:760px;height:760px;transform:translate(-50%,-50%);
+  background:radial-gradient(circle,rgba(25,119,205,.06),transparent 62%);pointer-events:none}
+
+/* ===== component column ===== */
+.board{position:absolute;left:50%;top:calc(50% - 16px);width:700px;display:flex;flex-direction:column;gap:64px;z-index:2;transform:translate(-50%,-50%) scale(0.82);transform-origin:center center}
+
+/* generic */
+.card{background:var(--surface);border:1.838px solid var(--line);border-radius:12px;width:100%}
+.label{font-weight:500;font-size:25.737px;line-height:36.767px;color:var(--ink);white-space:nowrap;
+  overflow:hidden;text-overflow:ellipsis}
+
+/* file uploader */
+.file-row{display:flex;align-items:center;justify-content:space-between;gap:30px;padding:24px 36px 24px 30px}
+.file-left{display:flex;align-items:center;gap:22px;flex:1;min-width:0}
+.file-meta{display:flex;flex-direction:column;gap:2px;min-width:0}
+.file-name{font-weight:500;font-size:24px;line-height:36.767px;color:var(--ink)}
+.file-size{font-weight:400;font-size:20px;line-height:29.414px;color:var(--muted)}
+.trash{width:27px;height:27px;flex:none;border-radius:8px;display:flex;align-items:center;justify-content:center;
+  transition:background .2s var(--e-out),transform .2s var(--e-pop)}
+.trash.hot{background:#fdecec;transform:scale(1.08)}
+.trash.hot svg path{stroke:var(--red)}
+.trash svg path{transition:stroke .2s var(--e-out)}
+
+/* segmented control + radio + checkbox row */
+.row{display:flex;align-items:center;justify-content:space-between;width:100%}
+.seg{display:flex;align-items:center;gap:7.353px;width:367px}
+.seg-item{display:flex;align-items:center;justify-content:center;gap:14.707px;padding:7.353px 24px 7.353px 14.707px;
+  border-radius:11.03px;flex:1;background:transparent;box-shadow:0 0 0 rgba(0,0,0,0);
+  transition:background .3s var(--e-out),box-shadow .3s var(--e-out)}
+.seg-item.on{background:var(--surface);
+  box-shadow:0 -1.621px 1.621px rgba(0,0,0,.04),0 1.621px 2.431px rgba(0,0,0,.08)}
+.seg-item .chk{width:29.414px;height:29.414px;flex:none;display:flex;align-items:center;justify-content:center;
+  opacity:0;transform:scale(.6);transition:opacity .25s var(--e-out),transform .3s var(--e-pop)}
+.seg-item.on .chk{opacity:1;transform:scale(1)}
+.seg-item:not(.on){padding-left:14.707px;padding-right:14.707px}
+.seg-item:not(.on) .chk{width:0;margin-left:-14.707px}
+
+.controls{display:flex;align-items:center;gap:50px}
+.tgl{display:flex;align-items:center;gap:14.707px}
+.radio{width:32.121px;height:32.121px;flex:none;border-radius:999px;background:var(--blue);position:relative;
+  transition:background .25s var(--e-out),box-shadow .25s var(--e-out)}
+.radio .dot{position:absolute;inset:31.25%;background:var(--surface);border-radius:999px;
+  transform:scale(1);transition:transform .25s var(--e-pop)}
+.radio:not(.on){background:transparent;box-shadow:inset 0 0 0 2px #c8c8de}
+.radio:not(.on) .dot{transform:scale(0)}
+.cbox{width:32.121px;height:32.121px;flex:none;border-radius:6px;background:var(--blue);position:relative;
+  transition:background .25s var(--e-out),box-shadow .25s var(--e-out)}
+.cbox .ck{position:absolute;inset:0;opacity:1;transform:scale(1);transition:opacity .2s var(--e-out),transform .28s var(--e-pop)}
+.cbox:not(.on){background:transparent;box-shadow:inset 0 0 0 2px #c8c8de}
+.cbox:not(.on) .ck{opacity:0;transform:scale(.5)}
+/* hover states for cursor interactions */
+.cbox.hover{box-shadow:inset 0 0 0 2px var(--blue), 0 0 0 4px rgba(25,119,205,.15);}
+.cbox.on.hover{box-shadow:0 0 0 4px rgba(25,119,205,.18);}
+.tab.hover .label{color:var(--ink)}
+.tab.hover{background:rgba(55,65,81,.07);border-radius:8px 8px 0 0}
+.btn.red.hover{filter:brightness(1.08);box-shadow:0 0 0 3px rgba(220,48,48,.22)}
+
+/* accordion */
+.acc-head{display:flex;align-items:center;gap:22.06px;padding:24px 36px 24px 30px;cursor:default}
+.acc-title{flex:1;font-weight:500;font-size:25.737px;line-height:36.767px;color:var(--ink)}
+.acc-ico{width:29.414px;height:29.414px;flex:none;display:flex;align-items:center;justify-content:center;
+  transition:transform .38s var(--e-io)}
+.acc.open .acc-ico{transform:rotate(45deg)}
+.acc-body{max-height:0;opacity:0;overflow:hidden;padding:0 30px;
+  transition:max-height .42s var(--e-io),opacity .35s var(--e-out),padding .42s var(--e-io)}
+.acc.open .acc-body{max-height:150px;opacity:1;padding:0 30px 22px}
+.acc-line{height:14px;border-radius:7px;background:#eef1f6;margin-top:14px}
+.acc-line.w1{width:92%}.acc-line.w2{width:78%}.acc-line.w3{width:60%}
+
+/* tabs + buttons row */
+.tabs{display:flex;align-items:center;position:relative}
+.tab{display:flex;align-items:center;justify-content:center;height:58.827px;padding:0 29.414px}
+.tab .label{font-size:25.74px}
+.tab-underline{position:absolute;bottom:0;left:0;height:3.677px;background:var(--ink);border-radius:2px;
+  transition:transform .4s var(--e-io),width .4s var(--e-io);transform-origin:left}
+.btns{display:flex;align-items:center;gap:20px}
+.btn{height:60px;padding:0 25px;border-radius:8px;display:flex;align-items:center;justify-content:center;
+  position:relative;overflow:hidden;transition:transform .12s var(--e-out),filter .18s var(--e-out)}
+.btn .t{font-weight:500;font-size:24px;line-height:29px;color:var(--surface);white-space:nowrap;position:relative;z-index:2}
+.btn.blue{background:var(--blue)} .btn.red{background:var(--red)}
+.btn.hot{filter:brightness(1.06)} .btn.press{transform:scale(.955)}
+.btn .ripple{position:absolute;left:50%;top:50%;width:12px;height:12px;border-radius:999px;
+  background:rgba(255,255,255,.55);transform:translate(-50%,-50%) scale(0);opacity:0;z-index:1}
+.btn .ripple.go{animation:rip .55s var(--e-out) forwards}
+@keyframes rip{0%{transform:translate(-50%,-50%) scale(0);opacity:.55}100%{transform:translate(-50%,-50%) scale(16);opacity:0}}
+
+/* toast */
+.toast{background:var(--toast);height:77.96px;border-radius:10.631px;display:flex;align-items:center;
+  justify-content:space-between;padding:21.262px 14.175px 21.262px 28.349px;width:100%;
+  transition:transform .5s var(--e-out),opacity .5s var(--e-out)}
+.toast.out{transform:translateX(46px);opacity:0}
+.toast-left{display:flex;align-items:center;gap:15.223px}
+.toast-txt{font-weight:400;font-size:25px;line-height:35.436px;color:var(--surface);white-space:nowrap}
+.toast-close{width:28.349px;height:28.349px;display:flex;align-items:center;justify-content:center;border-radius:7.087px;
+  transition:background .18s var(--e-out)} .toast-close.hot{background:rgba(255,255,255,.12)}
+
+/* pagination */
+.pg{display:flex;align-items:center;justify-content:space-between;width:100%}
+.pg-item{width:57.333px;height:57.333px;border-radius:10.75px;display:flex;align-items:center;justify-content:center;
+  font-weight:400;font-size:25.08px;line-height:35.833px;color:var(--ink);
+  background:transparent;box-shadow:inset 0 0 0 0 var(--ink);transition:box-shadow .3s var(--e-out),background .3s var(--e-out)}
+.pg-item.on{background:var(--surface);box-shadow:inset 0 0 0 1.792px var(--ink)}
+.pg-arrow{width:57.333px;height:57.333px;display:flex;align-items:center;justify-content:center;border-radius:7.167px;
+  transition:background .18s var(--e-out)} .pg-arrow.hot{background:#eef1f6}
+
+/* ===== presence cursors ===== */
+.cur{position:absolute;left:0;top:0;z-index:60;pointer-events:none;will-change:transform;
+  transition:transform .62s var(--e-io)}
+.cur svg{display:block;width:36px;height:36px;filter:drop-shadow(0 3px 7px rgba(16,24,40,.28));transition:transform .12s var(--e-out)}
+.cur.press svg{transform:scale(.86)}
+.cur .tag{position:absolute;left:25px;top:26px;height:28px;display:flex;align-items:center;padding:0 10px;
+  border-radius:8px;font-size:16px;font-weight:600;line-height:1;color:#fff;white-space:nowrap;
+  box-shadow:0 3px 8px rgba(16,24,40,.22)}
+.cur.c1 .tag{background:var(--p1)} .cur.c2 .tag{background:var(--p2)} .cur.c3 .tag{background:var(--p3)}
+
+@media (prefers-reduced-motion: reduce){
+  .drift{animation:none}
+  .cur{display:none}
+}
+</style></head>
+
+<body>
+<script>if(window.self!==window.top)document.documentElement.classList.add('embed');</script>
+<div class="frame">
+ <div class="scaler" id="scaler">
+  <div class="camera" id="camera">
+   <div class="drift">
+    <div class="app" id="app">
+    </div><!-- /app -->
+   </div><!-- /drift -->
+
+   <!-- board lives outside drift so components never move -->
+   <div class="board" id="board">
+
+      <!-- 1. File Uploader / file item -->
+      <div class="card">
+        <div class="file-row">
+          <div class="file-left">
+            <svg width="55.173" height="55.173" viewBox="0 0 55.173 55.173" fill="none" style="flex:none">
+              <svg x="10.69" y="1.04" width="42.07" height="53.6" viewBox="0 0 44.6553 55.6898" preserveAspectRatio="none" overflow="visible">
+                <path d="M1.29311 5.77588C1.29311 4.58698 1.7654 3.44677 2.60608 2.60608C3.44677 1.7654 4.58698 1.29311 5.77588 1.29311H27.8449C28.0118 1.29311 28.1732 1.35932 28.2904 1.47794L43.1774 16.3649C43.2952 16.4833 43.3617 16.6434 43.3622 16.8104V49.914C43.3622 51.1029 42.8899 52.2431 42.0492 53.0838C41.2086 53.9244 40.0684 54.3967 38.8794 54.3967H5.77588C4.58698 54.3967 3.44677 53.9244 2.60608 53.0838C1.7654 52.2431 1.29311 51.1029 1.29311 49.914V5.77588Z" stroke="#374151" stroke-width="2.58622" fill="none"/>
+              </svg>
+              <svg x="37.24" y="0.69" width="15.86" height="16.55" viewBox="0 0 17.1552 17.1552" preserveAspectRatio="none" overflow="visible">
+                <path d="M1.29311 0V10.3449C1.29311 11.8081 1.87439 13.2115 2.90908 14.2462C3.94376 15.2808 5.3471 15.8621 6.81037 15.8621H17.1552" stroke="#374151" stroke-width="2.58622" fill="none"/>
+              </svg>
+              <svg x="1.38" y="24.83" width="35.86" height="22.07" viewBox="0 0 35.8622 22.069" preserveAspectRatio="none">
+                <path d="M33.1036 0H2.75863C1.23508 0 0 1.23508 0 2.75863V19.3104C0 20.834 1.23508 22.069 2.75863 22.069H33.1036C34.6271 22.069 35.8622 20.834 35.8622 19.3104V2.75863C35.8622 1.23508 34.6271 0 33.1036 0Z" fill="#DC3030"/>
+              </svg>
+              <svg x="6.66" y="31.35" width="25.61" height="10.03" viewBox="0 0 25.6084 10.0318" preserveAspectRatio="none">
+                <path d="M0 10.0318V0H3.95863C4.71818 0 5.36646 0.145288 5.90347 0.435864C6.43864 0.7246 6.84646 1.1246 7.12692 1.63587C7.41198 2.14622 7.55451 2.73426 7.55451 3.40001C7.55451 4.06576 7.4106 4.65335 7.12278 5.16278C6.83497 5.67312 6.41841 6.06991 5.87312 6.35313C5.33059 6.63727 4.6745 6.77934 3.90484 6.77934H1.3807V5.08002H3.56139C3.96967 5.08002 4.30622 5.00967 4.57105 4.86898C4.83772 4.72553 5.0368 4.52783 5.16829 4.27588C5.30163 4.02208 5.36829 3.73013 5.36829 3.40001C5.36829 3.06622 5.30163 2.77564 5.16829 2.52828C5.03655 2.27507 4.82727 2.07063 4.57105 1.94483C4.30346 1.80414 3.96323 1.7338 3.55036 1.7338H2.12139V10.0318H0ZM12.4869 10.0318H8.93107V0H12.5173C13.5242 0 14.3927 0.200921 15.1228 0.602761C15.8502 1.00092 16.4102 1.5738 16.8028 2.32139C17.1982 3.0699 17.3959 3.96507 17.3959 5.00692C17.3959 6.05152 17.1982 6.94945 16.8028 7.70072C16.4273 8.43485 15.8376 9.03756 15.1118 9.429C14.3807 9.83084 13.5058 10.0318 12.4869 10.0318ZM11.0525 8.2152H12.3987C13.0258 8.2152 13.5532 8.10394 13.9807 7.88141C14.4129 7.65704 14.7361 7.30945 14.9504 6.83864C15.1692 6.36416 15.2787 5.75358 15.2787 5.00692C15.2787 4.26484 15.1692 3.65886 14.9504 3.18898C14.757 2.74239 14.4162 2.37574 13.9849 2.15035C13.5573 1.92966 13.0304 1.81886 12.4042 1.81794H11.0525V8.2152ZM18.9656 10.0318V0H25.6084V1.74897H21.087V4.13933H25.167V5.8883H21.087V10.0318H18.9656Z" fill="#FEFEFE"/>
+              </svg>
+            </svg>
+            <div class="file-meta">
+              <span class="file-name">File name</span>
+              <span class="file-size">File size</span>
+            </div>
+          </div>
+          <div class="trash" id="fileTrash">
+            <svg width="27" height="27" viewBox="0 0 27 27" fill="none">
+              <path d="M21.375 6.75V22.5C21.375 23.0967 21.1379 23.669 20.716 24.091C20.294 24.5129 19.7217 24.75 19.125 24.75H7.875C7.27826 24.75 6.70597 24.5129 6.28401 24.091C5.86205 23.669 5.625 23.0967 5.625 22.5V6.75M3.375 6.75H23.625M9 6.75V4.5C9 3.90326 9.23705 3.33097 9.65901 2.90901C10.081 2.48705 10.6533 2.25 11.25 2.25H15.75C16.3467 2.25 16.919 2.48705 17.341 2.90901C17.7629 3.33097 18 3.90326 18 4.5V6.75" stroke="#374151" stroke-width="2.75753" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2. Segmented control + radio + checkbox -->
+      <div class="row">
+        <div class="seg" id="seg">
+          <div class="seg-item on" data-i="0">
+            <span class="chk">
+              <svg width="22" height="16" viewBox="0 0 21.1411 15.2239" fill="none" style="overflow:visible">
+                <path d="M19.7623 1.37877L7.69812 13.8451L1.37877 7.52577" stroke="#374151" stroke-width="2.75753" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </span>
+            <span class="label">Label</span>
+          </div>
+          <div class="seg-item" data-i="1">
+            <span class="chk"><svg width="22" height="16" viewBox="0 0 21.1411 15.2239" fill="none" style="overflow:visible"><path d="M19.7623 1.37877L7.69812 13.8451L1.37877 7.52577" stroke="#374151" stroke-width="2.75753" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+            <span class="label">Label</span>
+          </div>
+          <div class="seg-item" data-i="2">
+            <span class="chk"><svg width="22" height="16" viewBox="0 0 21.1411 15.2239" fill="none" style="overflow:visible"><path d="M19.7623 1.37877L7.69812 13.8451L1.37877 7.52577" stroke="#374151" stroke-width="2.75753" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+            <span class="label">Label</span>
+          </div>
+        </div>
+        <div class="controls">
+          <div class="tgl">
+            <div class="radio on" id="radio"><span class="dot"></span></div>
+            <span class="label">Label</span>
+          </div>
+          <div class="tgl">
+            <div class="cbox on" id="cbox">
+              <span class="ck">
+                <svg width="32.121" height="32.121" viewBox="0 0 32.1206 32.1206" fill="none">
+                  <path d="M25.3 10L13.4875 22L7.30005 15.9171" stroke="#FEFEFE" stroke-width="3.01131" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </span>
+            </div>
+            <span class="label">Label</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3. Accordion -->
+      <div class="card acc" id="acc">
+        <div class="acc-head" id="accHead">
+          <span class="acc-title">Title</span>
+          <span class="acc-ico">
+            <svg width="19.92" height="19.92" viewBox="0 0 19.9155 19.9155" fill="none" style="overflow:visible">
+              <path d="M1.37877 9.95776H18.5368M9.95776 1.37877V18.5368" stroke="#374151" stroke-width="2.75753" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </span>
+        </div>
+        <div class="acc-body">
+          <div class="acc-line w1"></div>
+          <div class="acc-line w2"></div>
+          <div class="acc-line w3"></div>
+        </div>
+      </div>
+
+      <!-- 4. Tabs + buttons -->
+      <div class="row" style="align-items:flex-end">
+        <div class="tabs" id="tabs">
+          <div class="tab" data-i="0"><span class="label">Label</span></div>
+          <div class="tab" data-i="1"><span class="label">Label</span></div>
+          <div class="tab" data-i="2"><span class="label">Label</span></div>
+          <div class="tab-underline" id="tabUnderline"></div>
+        </div>
+        <div class="btns">
+          <div class="btn blue" id="btnBlue"><span class="ripple"></span><span class="t">Button</span></div>
+          <div class="btn red" id="btnRed"><span class="ripple"></span><span class="t">Button</span></div>
+        </div>
+      </div>
+
+      <!-- 5. Toast -->
+      <div class="toast" id="toast">
+        <div class="toast-left">
+          <svg width="28.349" height="28.349" viewBox="0 0 28.349 28.349" fill="none" style="flex:none">
+            <svg x="2.36" y="2.36" width="23.62" height="23.62" viewBox="0 0 26.2819 26.2819" preserveAspectRatio="none" overflow="visible">
+              <path d="M13.1409 17.8658V13.1409M13.1409 8.41611H13.1528M24.953 13.1409C24.953 19.6646 19.6646 24.953 13.1409 24.953C6.61731 24.953 1.32886 19.6646 1.32886 13.1409C1.32886 6.61731 6.61731 1.32886 13.1409 1.32886C19.6646 1.32886 24.953 6.61731 24.953 13.1409Z" stroke="#FEFEFE" stroke-width="2.65772" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </svg>
+          <span class="toast-txt">Toast text</span>
+        </div>
+        <div class="toast-close" id="toastClose">
+          <svg width="16.83" height="16.83" viewBox="0 0 16.8322 16.8322" fill="none">
+            <path d="M15.5034 1.32886L1.32886 15.5034M1.32886 1.32886L15.5034 15.5034" stroke="#FEFEFE" stroke-width="2.65772" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+      </div>
+
+      <!-- 6. Pagination -->
+      <div class="pg" id="pg">
+        <div class="pg-arrow" id="pgPrev">
+          <svg width="9.85" height="17.02" viewBox="0 0 9.85415 17.0208" fill="none">
+            <path d="M8.5104 1.34375L1.34375 8.5104L8.5104 15.6771" stroke="#374151" stroke-width="2.6875" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <div class="pg-item" data-i="0">1</div>
+        <div class="pg-item" data-i="1">2</div>
+        <div class="pg-item" data-i="2">3</div>
+        <div class="pg-item on" data-i="3">4</div>
+        <div class="pg-item" data-i="4">5</div>
+        <div class="pg-item" data-i="5">6</div>
+        <div class="pg-item" data-i="6">7</div>
+        <div class="pg-arrow" id="pgNext">
+          <svg width="9.85" height="17.02" viewBox="0 0 9.85415 17.0208" fill="none">
+            <path d="M1.34375 15.6771L8.5104 8.5104L1.34375 1.34375" stroke="#374151" stroke-width="2.6875" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+      </div>
+
+     </div><!-- /board -->
+
+     <!-- cursors outside drift so positions align with static board -->
+     <div class="cur c1" id="cur1">
+       <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M5 2.5L5 19.5L9.4 15.3L12.1 21L14.7 19.8L12 14.2L18 14.2Z" fill="var(--p1)" stroke="#fefefe" stroke-width="1.4" stroke-linejoin="round"/></svg>
+       <span class="tag">Maya</span>
+     </div>
+     <div class="cur c2" id="cur2">
+       <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M5 2.5L5 19.5L9.4 15.3L12.1 21L14.7 19.8L12 14.2L18 14.2Z" fill="var(--p2)" stroke="#fefefe" stroke-width="1.4" stroke-linejoin="round"/></svg>
+       <span class="tag">Leo</span>
+     </div>
+     <div class="cur c3" id="cur3">
+       <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M5 2.5L5 19.5L9.4 15.3L12.1 21L14.7 19.8L12 14.2L18 14.2Z" fill="var(--p3)" stroke="#fefefe" stroke-width="1.4" stroke-linejoin="round"/></svg>
+       <span class="tag">Ada</span>
+     </div>
+
+  </div><!-- /camera -->
+ </div><!-- /scaler -->
+</div><!-- /frame -->
+
+<script>
+const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const sleep = ms => new Promise(r=>setTimeout(r,ms));
+const $ = id => document.getElementById(id);
+
+const frame=document.querySelector('.frame'), scaler=$('scaler'),
+      camera=$('camera'), app=$('app');
+
+/* fit the 1280-wide stage into the responsive frame */
+function fit(){ scaler.style.transform='scale('+(frame.clientWidth/1280)+')'; }
+addEventListener('resize',fit); fit(); new ResizeObserver(fit).observe(frame);
+
+/* measure an element's centre in scaler-space (1280x840) — scaler is stable, not affected by drift */
+function pt(el,ox=0,oy=0){
+  const a=scaler.getBoundingClientRect(), r=el.getBoundingClientRect();
+  const k=a.width/1280;
+  return { x:(r.left-a.left)/k + (r.width/k)/2 + ox,
+           y:(r.top -a.top )/k + (r.height/k)/2 + oy };
+}
+
+/* ---- cursor object ---- */
+const TIP={x:8,y:4};
+function Cursor(id){
+  const el=$(id);
+  return {
+    el,
+    place(p){ el.style.transition='none'; el.style.transform=`translate(${p.x-TIP.x}px,${p.y-TIP.y}px)`;
+              void el.offsetWidth; el.style.transition=''; },
+    move(p,dur=640){ el.style.transitionDuration=(dur/1000)+'s';
+              el.style.transform=`translate(${p.x-TIP.x}px,${p.y-TIP.y}px)`; return sleep(dur); },
+    async press(target,cls){
+      el.classList.add('press'); if(target) target.classList.add(cls||'press');
+      await sleep(150); el.classList.remove('press');
+      if(target) target.classList.remove(cls||'press'); await sleep(120);
+    }
+  };
+}
+const c1=Cursor('cur1'), c2=Cursor('cur2'), c3=Cursor('cur3');
+
+/* targets */
+const seg=[...document.querySelectorAll('#seg .seg-item')];
+const tabs=[...document.querySelectorAll('#tabs .tab')];
+const pgItems=[...document.querySelectorAll('#pg .pg-item')];
+const tabUnderline=$('tabUnderline');
+
+function setSeg(i){ seg.forEach((s,k)=>s.classList.toggle('on',k===i)); }
+function setTab(i){
+  const t=tabs[i];
+  tabUnderline.style.width=t.offsetWidth+'px';
+  tabUnderline.style.transform=`translateX(${t.offsetLeft}px)`;
+}
+function setPage(i){ pgItems.forEach((p,k)=>p.classList.toggle('on',k===i)); }
+function ripple(btn){ const r=btn.querySelector('.ripple'); r.classList.remove('go'); void r.offsetWidth; r.classList.add('go'); }
+
+function initState(){
+  setSeg(0); setTab(0); setPage(3);
+  $('radio').classList.add('on'); $('cbox').classList.add('on');
+  $('acc').classList.remove('open'); $('toast').classList.remove('out');
+}
+
+/* ── home positions ── */
+const HOME = {
+  ada:  {x:1060, y:200},
+  maya: {x:155,  y:340},
+  leo:  {x:1024, y:460}
+};
+
+/* ── relay loop ──
+   Ada  → checkbox (uncheck + recheck) → home   triggers Maya
+   Maya → tab 2 (hover + click)        → home   triggers Leo
+   Leo  → red button (hover + click)   → home   triggers Ada
+*/
+async function relay(){
+  // place all cursors at home silently
+  c1.place(HOME.maya);
+  c2.place(HOME.leo);
+  c3.place(HOME.ada);
+  await sleep(600);
+
+  while(true){
+
+    /* ── ADA: checkbox ── */
+    const cboxEl = $('cbox');
+    await c3.move(pt(cboxEl), 700);
+    await sleep(300);
+    await c3.press(); cboxEl.classList.remove('on');   // uncheck
+    await sleep(700);
+    await c3.press(); cboxEl.classList.add('on');      // recheck
+    await sleep(300);
+    // Ada starts returning home — while she's on her way, Maya fires
+    const adaReturn = c3.move(HOME.ada, 850);
+
+    /* ── MAYA fires while Ada is returning ── */
+    await sleep(200); // small stagger so overlap looks intentional
+    const tab2Pt = pt(tabs[1]);
+    await c1.move(tab2Pt, 700);
+    tabs[1].classList.add('hover');
+    await sleep(600);
+    tabs[1].classList.remove('hover');
+    await c1.press(); setTab(1);
+    setTimeout(() => setTab(0), 2000);
+    await sleep(200);
+    // Maya starts returning home — while she's on her way, Leo fires
+    const mayaReturn = c1.move(HOME.maya, 850);
+
+    /* ── LEO fires while Maya is returning ── */
+    await sleep(200);
+    const redBtn = $('btnRed');
+    await c2.move(pt(redBtn), 700);
+    redBtn.classList.add('hover');
+    await sleep(500);
+    await c2.press(redBtn, 'press'); ripple(redBtn);
+    redBtn.classList.remove('hover');
+    await sleep(200);
+    // Leo starts returning home — while he's on his way, Ada fires next cycle
+    const leoReturn = c2.move(HOME.leo, 850);
+
+    /* ── wait for all returns before Ada's next move ── */
+    await Promise.all([adaReturn, mayaReturn, leoReturn]);
+    await sleep(400);
+  }
+}
+
+async function run(){
+  await (document.fonts ? document.fonts.ready : Promise.resolve());
+  await sleep(120); fit(); initState(); setTab(0);
+
+  if(reduce){ setSeg(0); setTab(0); setPage(3); return; }
+
+  camera.style.transition='none';
+  camera.style.transform='translate(0px,0px) scale(1)';
+  await sleep(200);
+
+  relay();
+}
+run();
+</script>
+</body></html>
