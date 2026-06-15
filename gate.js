@@ -165,8 +165,8 @@
       try { sessionStorage.setItem(STORAGE_KEY, '1'); } catch (e) {}
       document.documentElement.classList.remove('pf-locked');
       var pre = document.getElementById('pf-gate-prestyle');
-      if (pre) pre.parentNode.removeChild(pre);
-      gate.parentNode.removeChild(gate);
+      if (pre && pre.parentNode) pre.parentNode.removeChild(pre);
+      if (gate && gate.parentNode) gate.parentNode.removeChild(gate);
     }
 
     var unlockBtn = gate.querySelector('#pf-unlock');
@@ -177,6 +177,11 @@
 
     // Validation runs on Unlock button click, or when Enter is pressed.
     unlockBtn.addEventListener('click', validate);
+    // Explicit Enter handling (more reliable than implicit form submission).
+    input.addEventListener('keydown', function (ev) {
+      if (ev.key === 'Enter' || ev.keyCode === 13) { ev.preventDefault(); validate(); }
+    });
+    // Safety net: never let the form navigate/reload.
     form.addEventListener('submit', function (ev) { ev.preventDefault(); validate(); });
     // clear the error state as soon as the user edits the field again
     input.addEventListener('input', function () {
